@@ -134,6 +134,9 @@ class LexTCL {
           strloc++;
         }
       }
+      if(sb != '') {
+        word_build.push({qqneutral: sb});
+      }
       //console.log(sbc);
       strloc++;
     }
@@ -307,7 +310,12 @@ function runTCLInterpreter(tcl_str, level) {
         varname = varname['word'];
       }
       if(!('start' in lt[i + 1])) { // peek ahead to see if set has another parameter
-        valname = trysub(lt[++i]['word'], level);
+        while(!('start' in lt[i + 1])) {
+          valname += trysub(lt[++i]['word'], level)['word'];
+        }
+        
+        valname = {word: valname};
+        
         if(index != '') {
           if(var_list_scoped[level][varname] == undefined) {
             var_list_scoped[level][varname] = {};
@@ -443,7 +451,7 @@ function runTCLInterpreter(tcl_str, level) {
 let t_script = `
 
 set a hello
-set b "$a world"
+set b "$a " "world"
 
 puts $b
 
