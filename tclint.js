@@ -214,10 +214,35 @@ class LexTCL {
 let proc_list = {};
 let var_list_scoped = [];
 
-function runTCLInterpreter(tcl_str) {
+function getCurrentLevel() {
+  return var_list_scoped.length - 1;
+}
+
+function trysub(wrd) {
+  if('cmdexp' in wrd) {
+    wrd = wrd['cmdexp'];
+    wrd = wrd.map(x => ({'word': x}));
+    wrd[0] = {'start': wrd[0]['word']};
+    return {word: runTCLInterpreter(wrd, getCurrentLevel())};
+  } else {
+    return wrd;
+  }
+}
+
+function runTCLInterpreter(tcl_str, level) {
   let line_count = 0; // for compiler errors
-  var_list_scoped.push({});
-  let lt = new LexTCL(tcl_str);
+  if(var_list_scoped[level] == undefined) {
+    var_list_scoped[level] = {};
+  }
+  let lt = undefined;
+  if(typeof tcl_str == 'string') {
+    lt = new LexTCL(tcl_str);
+  } else {
+    lt = tcl_str;
+  }
+  
+  let returnstack = []; // stack of what to return
+  
   console.log(lt);
   for(let i = 0;i < lt.length;i++) {
     assert('start' in lt[i]);
@@ -228,8 +253,19 @@ function runTCLInterpreter(tcl_str) {
       let name = lt[++i]['word'];
       let args = lt[++i]['word'];
       let body = lt[++i]['word'];
-      proc_list[name['word'] = {args: args['bracket'], body: body['bracket']};
+      proc_list[name['word']] = {args: args['bracket'], body: body['bracket']};
       console.log(proc_list);
+      break;
+      case 'set':
+      let varname = lt[++i]['word'];
+      let valname = '';
+      if(!('start' in lt[i + 1])) { // peek ahead to see if set has another parameter
+        valname = trysub(lt[++i]['word']);
+      }
+      
+      var_list_scoped[var_list_scoped.length - 1][varname['word']] = valname;
+      
+      console.log(var_list_scoped);
       break;
       default:
       console.warn(`error on command ${line_count}: not implemented '${lt[i]['start']['word']}'`);
@@ -259,4 +295,4 @@ set y [buildarr 10]
 
 puts $y(0)`;
 
-runTCLInterpreter(t_script);
+runTCLInterpreter(t_script, 0);
