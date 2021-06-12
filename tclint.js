@@ -301,9 +301,15 @@ function runTCLInterpreter(tcl_str, level) {
       case 'return':
       return trysub(lt[++i]['word'], level);
       case 'uplevel': // to modify variables in different stack instances
-      let mylevel = trysub(lt[++i]['word'], level);
+      let mylevel = {word: level - 1};
+      if(!('start' in lt[i + 2])) {
+        mylevel = trysub(lt[++i]['word'], level);
+      }
+      if('varexp' in lt[i + 1]['word']) {
+        lt[i+1]['word'] = trysub(lt[i+1]['word'], level)
+      }
       returnstack.push(runTCLInterpreter(lt[++i]['word']['bracket'], parseInt(mylevel['word'])));
-      break
+      break;
       case 'while': // looping statement
         let wcondition = trysub(lt[++i]['word'], level);
         let wbody = trysub(lt[++i]['word'], level);
@@ -412,11 +418,8 @@ proc for {init condition action body} {
   while $condition {
     $body
     $action
-    
-    puts $i
   }
   
-  puts $condition
 }
 
 proc printArr {b} {
