@@ -289,10 +289,14 @@ function runTCLInterpreter(tcl_str, level) {
       returnstack.push(var_list_scoped[level][varname['word']]);
       break;
       case 'puts':
-      console.log(trysub(lt[++i]['word'], level));
+      console.log(trysub(lt[++i]['word'], level)['word']);
       break;
       case 'return':
       return trysub(lt[++i]['word'], level);
+      case 'uplevel': // to modify variables in different stack instances
+        let mylevel = trysub(lt[++i]['word'], level);
+        returnstack.push(runTCLInterpreter(lt[++i]['word']['bracket'], parseInt(mylevel['word'])));
+      return 'agh';
       case 'expr': // basic reverse polish math parsing
       let math_stack = [];
       i++;
@@ -327,7 +331,7 @@ function runTCLInterpreter(tcl_str, level) {
         }
       }
       //console.log(math_stack);
-      returnstack.push(math_stack[0]);
+      returnstack.push({word: math_stack[0]});
       break;
       default:
       console.warn(`error on command ${line_count}: not implemented '${lt[i]['start']['word']}'`);
@@ -347,15 +351,17 @@ let t_script = `proc buildarr {z} {
   return $x
 }
 
-proc printArr {a} {
-  return $a
+proc printArr {b} {
+  uplevel 0 {set a 5}
 }
 
 set b 7
 
 set a [expr 4.5 1 9 + *]
 
-puts [printArr $a]
+#printArr 10
+
+puts $a
 `;
 
 runTCLInterpreter(t_script, 0);
