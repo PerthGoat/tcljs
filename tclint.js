@@ -167,7 +167,8 @@ class LexTCL {
         while(tcl_script[i] != '\n') {
           i++;
         }
-        i++;
+        //i++;
+        continue;
       }
       
       if(i >= tcl_script.length) {
@@ -238,7 +239,7 @@ function runTCLInterpreter(tcl_str, level) {
   
   let returnstack = []; // stack of what to return
   
-  //console.log(lt);
+  console.log(lt);
   for(let i = 0;i < lt.length;i++) {
     assert('start' in lt[i]);
     line_count++;
@@ -246,7 +247,9 @@ function runTCLInterpreter(tcl_str, level) {
       if(lt[i]['start']['word'] in proc_list) {
         let procedure = proc_list[lt[i]['start']['word']];
         let args = new LexTCL(procedure['args']);
-        args[0] = {'word': args[0]['start']}
+        if(args.length > 0) {
+          args[0] = {'word': args[0]['start']}
+        }
         let args_stack = {};
         //console.log(args);
         // calculate the required arguments
@@ -259,7 +262,7 @@ function runTCLInterpreter(tcl_str, level) {
           }
         }
         
-        if('start' in lt[i]) {
+        if(req_args.length > 0 && 'start' in lt[i]) {
           console.warn(`error on command ${line_count}: not enough words passed to ${lt[i]['start']['word']}`);
         }
         
