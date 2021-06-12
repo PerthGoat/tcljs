@@ -22,16 +22,23 @@ class LexTCL {
   }
   
   getNextWord(str, strloc) {
+    let bracket_cnt = 0;
     if(str[strloc] == '{') {
-      while(str[strloc] != '}') {
+      bracket_cnt++;
+      while(bracket_cnt > 0) {
         strloc++;
+        if(str[strloc] == '{') {
+          bracket_cnt++;
+        } else if(str[strloc] == '}') {
+          bracket_cnt--;
+        }
       }
       strloc++;
       
       return strloc;
     }
     
-    while(str[strloc] == '$' || this.isAlphaNum(str[strloc])) {
+    while(this.isAlphaNum(str[strloc])) {
       //console.log(str[strloc]);
       strloc++;
       
@@ -49,12 +56,27 @@ class LexTCL {
     if(word_type_lookahead == '$') {
       word_type = 'varexp';
       strloc++;
+    } else if(word_type_lookahead == '[') {
+      return this.getCmd(str, strloc - 1);
     }
+    
     
     let raw_word = this.getNextWord(str, strloc);
     
     let ret_type = {};
     ret_type[word_type] = str.substring(strloc, raw_word);
+    
+    if(str[raw_word] == '(' && word_type == 'varexp') {
+      let new_word = raw_word;
+      while(str[new_word] != ')') {
+        new_word++;
+      }
+      new_word++;
+      
+      ret_type[word_type] = {varexp: ret_type[word_type], index: str.substring(raw_word + 1, new_word - 1)};
+      
+      raw_word = new_word;
+    }
     
     return [raw_word, ret_type];
   }
@@ -62,13 +84,6 @@ class LexTCL {
   cmdStart(str, strloc) {
     let type = '';
     let n = this.smartGetNextWord(str, strloc);
-    if(str[n[0]] == '(') { // array case, anychar
-      type = 'array';
-      while(str[n[0]] != ')') {
-        n[0]++;
-      }
-      n[0]++;
-    }
     let cmdstart = {};
     
     if(type != '') {
@@ -109,18 +124,28 @@ class LexTCL {
     }
     else if(str[strloc] == '{') {
       type = 'bracket';
-      strloc++;
-      while(str[strloc] != '}') {
-        strloc++;
-      }
-      strloc++;
+      strloc = this.smartGetNextWord(str, strloc)[0];
     }
     else if(str[strloc] == '"') {
       type = 'quote';
+      let sb = '';
+      //let sbc = [];
       strloc++;
       while(str[strloc] != '"') {
-        strloc++;
+        let n = this.smartGetNextWord(str, strloc);
+        if(n[0] > strloc) {
+          if(sb.length > 0) {
+            word_build.push({qqneutral: sb});
+            sb = '';
+          }
+          strloc = n[0];
+          word_build.push(n[1]);
+        } else {
+          sb += str[strloc];
+          strloc++;
+        }
       }
+      //console.log(sbc);
       strloc++;
     }
     else {
@@ -132,6 +157,10 @@ class LexTCL {
     
     if(word_build.length > 0) {
       end_var[type] = word_build;
+    }
+    
+    if(type == 'bracket') {
+      end_var[type] = end_var[type].slice(1,-1);
     }
     
     return [strloc, end_var];
@@ -182,8 +211,33 @@ class LexTCL {
   }
 }
 
-let t_script = `set y(9) 10
-# comment
-puts [expr 5 9 $a]`;
+let proc_list = {};
+let var_list_scoped = [];
 
-let lt = new LexTCL(t_script);
+function runTCLInterpreter(tcl_str) {
+  var_list_scoped.push({});
+  console.log(var_list_scoped);
+  let lt = new LexTCL(tcl_str);
+}
+
+let t_script = `proc buildarr {z} {
+  for {set i 0} {$i $z <} {incr i} {
+    set x($i) [expr $i 5 +]
+  }
+  
+  return $x
+}
+
+proc printArr {a} {
+  for {set i 0} {$i 10 <} {incr i} {
+    if {$a($i) 11 =} {
+      puts "A is $a($i)"
+    }
+  }
+}
+
+set y [buildarr 10]
+
+puts $y(0)`;
+
+runTCLInterpreter(t_script);
