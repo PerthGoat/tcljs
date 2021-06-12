@@ -55,14 +55,14 @@ class LexTCL {
     let ret_type = {};
     ret_type[word_type] = str.substring(strloc, raw_word);
     
-    if(str[raw_word] == '(' && word_type == 'varexp') {
+    if(str[raw_word] == '(') {
       let new_word = raw_word;
       while(str[new_word] != ')') {
         new_word++;
       }
       new_word++;
       
-      ret_type[word_type] = {varexp: ret_type[word_type], index: str.substring(raw_word + 1, new_word - 1)};
+      ret_type[word_type] = {word: ret_type[word_type], index: str.substring(raw_word + 1, new_word - 1)};
       
       raw_word = new_word;
     }
@@ -219,7 +219,10 @@ function trysub(wrd, level) {
     wrd[0] = {'start': wrd[0]['word']};
     return runTCLInterpreter(wrd, level)['pend'];
   } else if('varexp' in wrd) {
-    return var_list_scoped[level][wrd['varexp']]
+    if(typeof(wrd['varexp']) == 'string') {
+      return var_list_scoped[level][wrd['varexp']];
+    }
+    return var_list_scoped[level][wrd['varexp']['word']][wrd['varexp']['index']];
   } else {
     return wrd;
   }
@@ -287,12 +290,24 @@ function runTCLInterpreter(tcl_str, level) {
       case 'set':
       let varname = lt[++i]['word'];
       let valname = '';
+      let index = '';
+      if('index' in varname['word']) {
+        index = varname['word']['index']
+        varname = varname['word']['word']
+      }
       if(!('start' in lt[i + 1])) { // peek ahead to see if set has another parameter
         valname = trysub(lt[++i]['word'], level);
-        var_list_scoped[level][varname['word']] = valname;
+        if(index != '') {
+          if(var_list_scoped[level][varname] == undefined) {
+            var_list_scoped[level][varname] = {};
+          }
+          var_list_scoped[level][varname][index] = valname;
+        } else {
+          var_list_scoped[level][varname] = valname;
+        }
       }
       //console.log(var_list_scoped);
-      returnstack.push(var_list_scoped[level][varname['word']]);
+      returnstack.push(var_list_scoped[level][varname]);
       break;
       case 'puts':
       let toput = trysub(lt[++i]['word'], level)['word'];
@@ -416,33 +431,20 @@ function runTCLInterpreter(tcl_str, level) {
 
 let t_script = `
 
-proc for {init condition action body} {
-  $init
-  
-  while $condition {
-    uplevel $body
-    $action
-  }
-}
-
-proc printArr {b} {
-  set i 0
-  while {$i $b <} {
-    puts $i
-    set i [expr $i 1 +]
-  }
-}
-
-set b 7
-
-for {set i 0} {$i 5 <} {set i [expr $i 1 +]} {
+proc test {b} {
   puts $b
 }
 
-#puts $a
+set a(5) 10
+set a(7) 3
+
+test $a
 `;
 
-//runTCLInterpreter(t_script, 0);
+//console.log(new LexTCL(t_script));
+
+runTCLInterpreter(t_script, 0);
+//console.log(var_list_scoped);
 
 function button_hookup() {
   let runval = runTCLInterpreter(document.getElementById('commandbox').value, 0);
