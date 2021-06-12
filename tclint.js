@@ -22,13 +22,13 @@ class LexTCL {
   }
   
   getNextWord(str, strloc) {
-    if(str[strloc] == '$' && str[strloc + 1] == '{') {
+    if(str[strloc] == '{') {
       while(str[strloc] != '}') {
         strloc++;
       }
       strloc++;
       
-      return strloc
+      return strloc;
     }
     
     while(str[strloc] == '$' || this.isAlphaNum(str[strloc])) {
@@ -40,41 +40,75 @@ class LexTCL {
       }
     }
     //console.log(str[strloc])
-    return strloc
+    return strloc;
+  }
+  
+  smartGetNextWord(str, strloc) {
+    let word_type_lookahead = str[strloc];
+    let word_type = 'word';
+    if(word_type_lookahead == '$') {
+      word_type = 'varexp';
+      strloc++;
+    }
+    
+    let raw_word = this.getNextWord(str, strloc);
+    
+    let ret_type = {};
+    ret_type[word_type] = str.substring(strloc, raw_word);
+    
+    return [raw_word, ret_type];
   }
   
   cmdStart(str, strloc) {
-    let n = this.getNextWord(str, strloc);
-    if(str[n] == '(') { // array case, anychar
-      while(str[n] != ')') {
-        n++;
+    let type = '';
+    let n = this.smartGetNextWord(str, strloc);
+    if(str[n[0]] == '(') { // array case, anychar
+      type = 'array';
+      while(str[n[0]] != ')') {
+        n[0]++;
       }
-      n++;
+      n[0]++;
     }
-    //console.log(str[n])
-    let cmdstart = str.substring(strloc, n);
+    let cmdstart = {};
     
-    return [n, cmdstart];
+    if(type != '') {
+      cmdstart[type] = str.substring(strloc, n[0]);
+    } else {
+      cmdstart = n[1];
+    }
+    
+    
+    return [n[0], cmdstart];
   }
   
   getCmd(str, strloc) {
     assert(str[strloc] == ' ');
     
+    let type = '';
+    
     strloc++;
     
     let old = strloc; // doing this after removes the whitespace
     
+    let word_build = [];
+    
     if(str[strloc] == '[') {
+      type = 'cmdexp';
       strloc++;
-      strloc = getNextWord(str, strloc);
+      let n = this.smartGetNextWord(str, strloc);
+      word_build.push(n[1]);
+      strloc = n[0];
       while(str[strloc] != ']') {
         assert(str[strloc] == ' ');
         strloc++;
-        strloc = getNextWord(str, strloc)
+        n = this.smartGetNextWord(str, strloc);
+        word_build.push(n[1]);
+        strloc = n[0];
       }
       strloc++;
     }
     else if(str[strloc] == '{') {
+      type = 'bracket';
       strloc++;
       while(str[strloc] != '}') {
         strloc++;
@@ -82,6 +116,7 @@ class LexTCL {
       strloc++;
     }
     else if(str[strloc] == '"') {
+      type = 'quote';
       strloc++;
       while(str[strloc] != '"') {
         strloc++;
@@ -92,10 +127,19 @@ class LexTCL {
       return this.cmdStart(str, strloc);
     }
     
-    return [strloc, str.substring(old, strloc)];
+    let end_var = {};
+    end_var[type] = str.substring(old, strloc)
+    
+    if(word_build.length > 0) {
+      end_var[type] = word_build;
+    }
+    
+    return [strloc, end_var];
   }
   
   constructor(tcl_script) {
+    this.tcl_lex_obj = [];
+    //console.log(this.smartGetNextWord(tcl_script, 0));
     for(let i = 0;i < tcl_script.length;i++) {
       while(tcl_script[i] == ' ' || tcl_script[i] == '\t' || tcl_script[i] == '\n') {
         i++;
@@ -116,13 +160,15 @@ class LexTCL {
         let cmdstart = this.cmdStart(tcl_script, i);
         i = cmdstart[0];
         
-        console.log(cmdstart[1])
+        this.tcl_lex_obj.push({'start': cmdstart[1]});
+        //console.log(cmdstart[1])
         
         while(tcl_script[i] == ' ') {        
           let nextcmd = this.getCmd(tcl_script, i);
           i = nextcmd[0]
           
-          console.log(nextcmd[1])
+          this.tcl_lex_obj.push({'word': nextcmd[1]});
+          //console.log(nextcmd[1])
         }
         
         //console.log(cmdstart[1])
@@ -131,11 +177,13 @@ class LexTCL {
       }
       
     }
+    
+    console.log(this.tcl_lex_obj);
   }
 }
 
 let t_script = `set y(9) 10
 # comment
-puts $\{abcy}`;
+puts [expr 5 9 $a]`;
 
 let lt = new LexTCL(t_script);
