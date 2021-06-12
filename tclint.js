@@ -7,7 +7,7 @@ function assert(x) {
 // lexical analysis of code
 class LexTCL {
   isAlphaNum(s) {
-    return s.match(/^[a-z0-9+-/*.]+$/i);
+    return s.match(/^[a-z0-9+-/*.=><]+$/i);
   }
   
   getNextWord(str, strloc) {
@@ -170,6 +170,10 @@ class LexTCL {
         i++;
       }
       
+      if(i >= tcl_script.length) {
+        break;
+      }
+      
       if(tcl_script[i] == '$' || this.isAlphaNum(tcl_script[i])) {
         
         //let n = this.getNextWord(tcl_script, i);
@@ -294,9 +298,33 @@ function runTCLInterpreter(tcl_str, level) {
       case 'return':
       return trysub(lt[++i]['word'], level);
       case 'uplevel': // to modify variables in different stack instances
-        let mylevel = trysub(lt[++i]['word'], level);
-        returnstack.push(runTCLInterpreter(lt[++i]['word']['bracket'], parseInt(mylevel['word'])));
-      return 'agh';
+      let mylevel = trysub(lt[++i]['word'], level);
+      returnstack.push(runTCLInterpreter(lt[++i]['word']['bracket'], parseInt(mylevel['word'])));
+      break
+      case 'if': // basic control statement
+      let condition = lt[++i]['word']
+      let ifbody = lt[++i]['word']
+      let elsebody = '';
+      if(!('start' in lt[i + 1])) {
+        elsebody = lt[++i]['word']
+      }
+      let condition_text = 'expr ' + condition['bracket'];
+      //console.log(condition_text);
+      let cond_result = runTCLInterpreter(condition_text, level)['word'];
+      
+      if(cond_result) {
+        let res = runTCLInterpreter(ifbody['bracket'], level);
+        if(res != undefined) { // bubble return out from if statement
+          return res
+        }
+      } else if(elsebody != '') {
+        let res = runTCLInterpreter(elsebody['bracket'], level);
+        if(res != undefined) {
+          return res
+        }
+      }
+      //console.log(condition, ifbody, elsebody);
+      break
       case 'expr': // basic reverse polish math parsing
       let math_stack = [];
       i++;
@@ -321,6 +349,18 @@ function runTCLInterpreter(tcl_str, level) {
           math_stack[stack_len-2] = math_stack[stack_len-2] / math_stack[stack_len-1];
           math_stack.pop();
           break;
+          case '=':
+          math_stack[stack_len-2] = math_stack[stack_len-2] == math_stack[stack_len-1];
+          math_stack.pop();
+          break;
+          case '>':
+          math_stack[stack_len-2] = math_stack[stack_len-2] > math_stack[stack_len-1];
+          math_stack.pop();
+          break;
+          case '<':
+          math_stack[stack_len-2] = math_stack[stack_len-2] < math_stack[stack_len-1];
+          math_stack.pop();
+          break;
           default:
           math_stack.push(parseFloat(term['word']));
         }
@@ -343,25 +383,25 @@ function runTCLInterpreter(tcl_str, level) {
   return returnstack[returnstack.length - 1];
 }
 
-let t_script = `proc buildarr {z} {
-  for {set i 0} {$i $z <} {incr i} {
-    set x($i) [expr $i 5 +]
-  }
-  
-  return $x
-}
+let t_script = `
 
 proc printArr {b} {
-  uplevel 0 {set a 5}
+  if {$b 0 =} {
+    return yes
+  } {
+    return no
+  }
+  
+  return ha
 }
 
 set b 7
 
 set a [expr 4.5 1 9 + *]
 
-#printArr 10
+puts [printArr 10]
 
-puts $a
+#puts $a
 `;
 
 runTCLInterpreter(t_script, 0);
