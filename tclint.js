@@ -207,7 +207,7 @@ class LexTCL {
       
     }
     
-    console.log(this.tcl_lex_obj);
+    return this.tcl_lex_obj;
   }
 }
 
@@ -215,9 +215,28 @@ let proc_list = {};
 let var_list_scoped = [];
 
 function runTCLInterpreter(tcl_str) {
+  let line_count = 0; // for compiler errors
   var_list_scoped.push({});
-  console.log(var_list_scoped);
   let lt = new LexTCL(tcl_str);
+  console.log(lt);
+  for(let i = 0;i < lt.length;i++) {
+    assert('start' in lt[i]);
+    line_count++;
+    if('word' in lt[i]['start']) {
+      switch(lt[i]['start']['word']) {
+      case 'proc':
+      let name = lt[++i]['word'];
+      let args = lt[++i]['word'];
+      let body = lt[++i]['word'];
+      proc_list[name['word'] = {args: args['bracket'], body: body['bracket']};
+      console.log(proc_list);
+      break;
+      default:
+      console.warn(`error on command ${line_count}: not implemented '${lt[i]['start']['word']}'`);
+      return;
+      }
+    }
+  }
 }
 
 let t_script = `proc buildarr {z} {
