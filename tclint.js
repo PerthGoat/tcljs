@@ -185,7 +185,7 @@ class LexTCL {
         this.tcl_lex_obj.push({'start': cmdstart[1]});
         //console.log(cmdstart[1])
         
-        while(tcl_script[i] == ' ') {        
+        while(tcl_script[i] == ' ' && tcl_script[i + 1] != ';') {      
           let nextcmd = this.getCmd(tcl_script, i);
           i = nextcmd[0]
           
@@ -297,6 +297,7 @@ function runTCLInterpreter(tcl_str, level) {
         toput = trysub(lt[i]['word'], level)['bracket']
       }
       console.log(toput);
+      document.getElementById('resultbox').value += toput + '\n';
       break;
       case 'return':
       return trysub(lt[++i]['word'], level);
@@ -432,10 +433,18 @@ proc printArr {b} {
 set b 7
 
 for {set i 0} {$i 5 <} {set i [expr $i 1 +]} {
-  puts hi
+  puts $b
 }
 
 #puts $a
 `;
 
-runTCLInterpreter(t_script, 0);
+//runTCLInterpreter(t_script, 0);
+
+function button_hookup() {
+  let runval = runTCLInterpreter(document.getElementById('commandbox').value, 0);
+  if(!('pend' in runval)) {
+    document.getElementById('resultbox').value += runval + '\n';
+  }
+  document.getElementById('resultbox').value += 'done\n';
+}
