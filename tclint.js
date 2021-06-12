@@ -216,7 +216,7 @@ function trysub(wrd, level) {
     wrd = wrd['cmdexp'];
     wrd = wrd.map(x => ({'word': x}));
     wrd[0] = {'start': wrd[0]['word']};
-    return runTCLInterpreter(wrd, level);
+    return runTCLInterpreter(wrd, level)['pend'];
   } else if('varexp' in wrd) {
     return var_list_scoped[level][wrd['varexp']]
   } else {
@@ -238,7 +238,7 @@ function runTCLInterpreter(tcl_str, level) {
   
   let returnstack = []; // stack of what to return
   
-  console.log(lt);
+  //console.log(lt);
   for(let i = 0;i < lt.length;i++) {
     assert('start' in lt[i]);
     line_count++;
@@ -247,7 +247,6 @@ function runTCLInterpreter(tcl_str, level) {
         let procedure = proc_list[lt[i]['start']['word']];
         let args = new LexTCL(procedure['args']);
         args[0] = {'word': args[0]['start']}
-        
         let args_stack = {};
         //console.log(args);
         // calculate the required arguments
@@ -293,7 +292,11 @@ function runTCLInterpreter(tcl_str, level) {
       returnstack.push(var_list_scoped[level][varname['word']]);
       break;
       case 'puts':
-      console.log(trysub(lt[++i]['word'], level)['word']);
+      let toput = trysub(lt[++i]['word'], level)['word'];
+      if(toput == undefined) {
+        toput = trysub(lt[i]['word'], level)['bracket']
+      }
+      console.log(toput);
       break;
       case 'return':
       return trysub(lt[++i]['word'], level);
@@ -301,35 +304,48 @@ function runTCLInterpreter(tcl_str, level) {
       let mylevel = trysub(lt[++i]['word'], level);
       returnstack.push(runTCLInterpreter(lt[++i]['word']['bracket'], parseInt(mylevel['word'])));
       break
+      case 'while': // looping statement
+        let wcondition = lt[++i]['word'];
+        let wbody = lt[++i]['word'];
+        let w_cond_text = 'expr ' + wcondition['bracket'];
+        let w_cond_result = runTCLInterpreter(w_cond_text, level)['pend']['word'];
+        while(w_cond_result) {
+          let res = runTCLInterpreter(wbody['bracket'], level);
+          if(res != undefined && !('pend' in res)) { // bubble return out from if statement
+            return res;
+          }
+          w_cond_result = runTCLInterpreter(w_cond_text, level)['pend']['word'];
+        }
+      break;
       case 'if': // basic control statement
-      let condition = lt[++i]['word']
-      let ifbody = lt[++i]['word']
+      let condition = lt[++i]['word'];
+      let ifbody = lt[++i]['word'];
       let elsebody = '';
       if(!('start' in lt[i + 1])) {
-        elsebody = lt[++i]['word']
+        elsebody = lt[++i]['word'];
       }
       let condition_text = 'expr ' + condition['bracket'];
       //console.log(condition_text);
-      let cond_result = runTCLInterpreter(condition_text, level)['word'];
+      let cond_result = runTCLInterpreter(condition_text, level)['pend']['word'];
       
       if(cond_result) {
         let res = runTCLInterpreter(ifbody['bracket'], level);
-        if(res != undefined) { // bubble return out from if statement
-          return res
+        if(res != undefined && !('pend' in res)) { // bubble return out from if statement
+          return res;
         }
       } else if(elsebody != '') {
         let res = runTCLInterpreter(elsebody['bracket'], level);
-        if(res != undefined) {
-          return res
+        if(res != undefined && !('pend' in res)) { // bubble return out from if statement
+          return res;
         }
       }
       //console.log(condition, ifbody, elsebody);
-      break
+      break;
       case 'expr': // basic reverse polish math parsing
       let math_stack = [];
       i++;
       while(!('start' in lt[i])) {
-        let term = lt[i]['word'];
+        let term = trysub(lt[i]['word'], level);
         let stack_len = math_stack.length;
         // math code here
         switch(term['word']) {
@@ -380,26 +396,28 @@ function runTCLInterpreter(tcl_str, level) {
     }
   }
   //var_list_scoped[level] = undefined;
-  return returnstack[returnstack.length - 1];
+  return {'pend': returnstack[returnstack.length - 1]};
 }
 
 let t_script = `
 
+proc for {init condition action body} {
+  puts $init
+}
+
 proc printArr {b} {
-  if {$b 0 =} {
-    return yes
-  } {
-    return no
+  set i 0
+  while {$i $b <} {
+    puts $i
+    set i [expr $i 1 +]
   }
-  
-  return ha
 }
 
 set b 7
 
-set a [expr 4.5 1 9 + *]
-
-puts [printArr 10]
+for {set i 0} {expr $i 5 >} {set i [expr $i 1 +]} {
+  puts hi
+}
 
 #puts $a
 `;
