@@ -394,6 +394,10 @@ function runTCLInterpreter(tcl_str, level) {
       return;
       }
     }
+    else if('varexp' in lt[i]['start']) {
+      newcmd = var_list_scoped[level][lt[i]['start']['varexp']]['bracket']
+      returnstack.push(runTCLInterpreter(newcmd, level));
+    }
   }
   //var_list_scoped[level] = undefined;
   return {'pend': returnstack[returnstack.length - 1]};
@@ -402,7 +406,8 @@ function runTCLInterpreter(tcl_str, level) {
 let t_script = `
 
 proc for {init condition action body} {
-  puts $init
+  $init
+  puts $i
 }
 
 proc printArr {b} {
@@ -415,7 +420,7 @@ proc printArr {b} {
 
 set b 7
 
-for {set i 0} {expr $i 5 >} {set i [expr $i 1 +]} {
+for {set i 5} {expr $i 5 >} {set i [expr $i 1 +]} {
   puts hi
 }
 
