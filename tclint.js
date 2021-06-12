@@ -416,10 +416,9 @@ proc for {init condition action body} {
   $init
   
   while $condition {
-    $body
+    uplevel $body
     $action
   }
-  
 }
 
 proc printArr {b} {
