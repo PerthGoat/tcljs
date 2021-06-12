@@ -1,14 +1,3 @@
-class tcltd {
-  constructor(tcl_script) {
-    console.log(tcl_script);
-  }
-  
-  runTcl() {
-    
-  }
-  
-}
-
 function assert(x) {
   if(!x) {
     console.warn('ASSERT FAILED');
@@ -223,7 +212,7 @@ function trysub(wrd, level) {
     wrd = wrd['cmdexp'];
     wrd = wrd.map(x => ({'word': x}));
     wrd[0] = {'start': wrd[0]['word']};
-    return {word: runTCLInterpreter(wrd, level)};
+    return runTCLInterpreter(wrd, level);
   } else if('varexp' in wrd) {
     return var_list_scoped[level][wrd['varexp']]
   } else {
@@ -250,6 +239,38 @@ function runTCLInterpreter(tcl_str, level) {
     assert('start' in lt[i]);
     line_count++;
     if('word' in lt[i]['start']) {
+      if(lt[i]['start']['word'] in proc_list) {
+        let procedure = proc_list[lt[i]['start']['word']];
+        let args = new LexTCL(procedure['args']);
+        args[0] = {'word': args[0]['start']}
+        
+        let args_stack = {};
+        //console.log(args);
+        // calculate the required arguments
+        let req_args = args.length;
+        for(let j = 0;j < args.length;j++) {
+          if('bracket' in args[j]['word']) {
+            req_args--;
+          } else {
+            args_stack[args[j]['word']['word']] = lt[++i]['word']
+          }
+        }
+        
+        if('start' in lt[i]) {
+          console.warn(`error on command ${line_count}: not enough words passed to ${lt[i]['start']['word']}`);
+        }
+        
+        // run the function
+        //console.log(procedure);
+        let body = procedure['body'];
+        let next_level = getCurrentLevel() + 1;
+        var_list_scoped[next_level] = args_stack;
+        
+        returnstack.push(runTCLInterpreter(body, next_level));
+        var_list_scoped.pop();
+        //console.log(lt[i]);
+        continue;
+      }
       switch(lt[i]['start']['word']) {
       case 'proc':
       let name = lt[++i]['word'];
@@ -262,21 +283,24 @@ function runTCLInterpreter(tcl_str, level) {
       let valname = '';
       if(!('start' in lt[i + 1])) { // peek ahead to see if set has another parameter
         valname = trysub(lt[++i]['word'], level);
-        var_list_scoped[var_list_scoped.length - 1][varname['word']] = valname;
+        var_list_scoped[level][varname['word']] = valname;
       }
-      
-      returnstack.push(var_list_scoped[var_list_scoped.length - 1][varname['word']]);
+      console.log(var_list_scoped);
+      returnstack.push(var_list_scoped[level][varname['word']]);
       break;
       case 'puts':
       console.log(trysub(lt[++i]['word'], level)['word']);
       break;
+      case 'return':
+      return trysub(lt[++i]['word'], level);
       default:
       console.warn(`error on command ${line_count}: not implemented '${lt[i]['start']['word']}'`);
       return;
       }
     }
   }
-  console.log(returnstack);
+  //var_list_scoped[level] = undefined;
+  return returnstack[returnstack.length - 1];
 }
 
 let t_script = `proc buildarr {z} {
@@ -288,15 +312,14 @@ let t_script = `proc buildarr {z} {
 }
 
 proc printArr {a} {
-  for {set i 0} {$i 10 <} {incr i} {
-    if {$a($i) 11 =} {
-      puts "A is $a($i)"
-    }
-  }
+  return $a
 }
 
-set y 10
+set b 7
 
-puts $y`;
+set a [printArr 5]
+
+puts $a
+`;
 
 runTCLInterpreter(t_script, 0);
