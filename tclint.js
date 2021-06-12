@@ -305,10 +305,11 @@ function runTCLInterpreter(tcl_str, level) {
       returnstack.push(runTCLInterpreter(lt[++i]['word']['bracket'], parseInt(mylevel['word'])));
       break
       case 'while': // looping statement
-        let wcondition = lt[++i]['word'];
-        let wbody = lt[++i]['word'];
+        let wcondition = trysub(lt[++i]['word'], level);
+        let wbody = trysub(lt[++i]['word'], level);
         let w_cond_text = 'expr ' + wcondition['bracket'];
         let w_cond_result = runTCLInterpreter(w_cond_text, level)['pend']['word'];
+        
         while(w_cond_result) {
           let res = runTCLInterpreter(wbody['bracket'], level);
           if(res != undefined && !('pend' in res)) { // bubble return out from if statement
@@ -318,11 +319,11 @@ function runTCLInterpreter(tcl_str, level) {
         }
       break;
       case 'if': // basic control statement
-      let condition = lt[++i]['word'];
-      let ifbody = lt[++i]['word'];
+      let condition = trysub(lt[++i]['word'], level);
+      let ifbody = trysub(lt[++i]['word'], level);
       let elsebody = '';
       if(!('start' in lt[i + 1])) {
-        elsebody = lt[++i]['word'];
+        elsebody = trysub(lt[++i]['word'], level);
       }
       let condition_text = 'expr ' + condition['bracket'];
       //console.log(condition_text);
@@ -407,7 +408,15 @@ let t_script = `
 
 proc for {init condition action body} {
   $init
-  puts $i
+  
+  while $condition {
+    $body
+    $action
+    
+    puts $i
+  }
+  
+  puts $condition
 }
 
 proc printArr {b} {
@@ -420,7 +429,7 @@ proc printArr {b} {
 
 set b 7
 
-for {set i 5} {expr $i 5 >} {set i [expr $i 1 +]} {
+for {set i 0} {$i 5 <} {set i [expr $i 1 +]} {
   puts hi
 }
 
