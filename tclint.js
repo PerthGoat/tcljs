@@ -291,9 +291,11 @@ function runTCLInterpreter(tcl_str, level) {
       let varname = lt[++i]['word'];
       let valname = '';
       let index = '';
-      if('index' in varname['word']) {
-        index = varname['word']['index']
-        varname = varname['word']['word']
+      if(typeof(varname['word']) != 'string') {
+        index = varname['word']['index'];
+        varname = varname['word']['word'];
+      } else {
+        varname = varname['word'];
       }
       if(!('start' in lt[i + 1])) { // peek ahead to see if set has another parameter
         valname = trysub(lt[++i]['word'], level);
@@ -432,13 +434,16 @@ function runTCLInterpreter(tcl_str, level) {
 let t_script = `
 
 proc test {b} {
-  puts $b
+  return $b
 }
 
 set a(5) 10
 set a(7) 3
 
-test $a
+set o [test $a]
+
+puts $o(5)
+
 `;
 
 //console.log(new LexTCL(t_script));
