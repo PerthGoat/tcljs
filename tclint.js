@@ -7,7 +7,7 @@ function assert(x) {
 // lexical analysis of code
 class LexTCL {
   isAlphaNum(s) {
-    return s.match(/^[a-z0-9]+$/i);
+    return s.match(/^[a-z0-9+-/*.]+$/i);
   }
   
   getNextWord(str, strloc) {
@@ -285,7 +285,7 @@ function runTCLInterpreter(tcl_str, level) {
         valname = trysub(lt[++i]['word'], level);
         var_list_scoped[level][varname['word']] = valname;
       }
-      console.log(var_list_scoped);
+      //console.log(var_list_scoped);
       returnstack.push(var_list_scoped[level][varname['word']]);
       break;
       case 'puts':
@@ -293,6 +293,42 @@ function runTCLInterpreter(tcl_str, level) {
       break;
       case 'return':
       return trysub(lt[++i]['word'], level);
+      case 'expr': // basic reverse polish math parsing
+      let math_stack = [];
+      i++;
+      while(!('start' in lt[i])) {
+        let term = lt[i]['word'];
+        let stack_len = math_stack.length;
+        // math code here
+        switch(term['word']) {
+          case '+':
+          math_stack[stack_len-2] = math_stack[stack_len-2] + math_stack[stack_len-1];
+          math_stack.pop();
+          break;
+          case '-':
+          math_stack[stack_len-2] = math_stack[stack_len-2] - math_stack[stack_len-1];
+          math_stack.pop();
+          break;
+          case '*':
+          math_stack[stack_len-2] = math_stack[stack_len-2] * math_stack[stack_len-1];
+          math_stack.pop();
+          break;
+          case '/':
+          math_stack[stack_len-2] = math_stack[stack_len-2] / math_stack[stack_len-1];
+          math_stack.pop();
+          break;
+          default:
+          math_stack.push(parseFloat(term['word']));
+        }
+        // end math code
+        i++;
+        if(i >= lt.length) {
+          break;
+        }
+      }
+      console.log(math_stack);
+      returnstack.push(math_stack[0]);
+      break;
       default:
       console.warn(`error on command ${line_count}: not implemented '${lt[i]['start']['word']}'`);
       return;
@@ -317,7 +353,7 @@ proc printArr {a} {
 
 set b 7
 
-set a [printArr 5]
+set a [expr 4.5 1 9 + *]
 
 puts $a
 `;
