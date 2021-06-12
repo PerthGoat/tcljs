@@ -1,0 +1,41 @@
+
+EOF = ? end of file ? ;
+WHITESPACE = ' ' | '\t' ;
+anychar = ? any character ? ;
+ALNUM = ? alphanumeric ?
+
+(* A program is a series of commands *)
+PROGRAM = { 
+{WHITESPACE | '\n'} | 
+('#', { anychar - '\n' }, '\n') | 
+CMD 
+}, 
+[EOF] ; (* this extra EOF is here in case the last line is a comment *)
+
+CMD = CMDSTART, 
+{ 
+WHITESPACE, 
+(
+('[', WORD, {WHITESPACE, WORD}, ']') | 
+
+('{', { anychar - '}' }, '}') | (* braces can be empty *)
+
+('$', (('{', { anychar - '}' }, '}') | WORD), ['(', anychar - ')', ')']) | (* optional array index *) 
+
+('"', 
+('[', WORD, {WHITESPACE, WORD}, ']') | 
+('$', (('{', { anychar - '}' }, '}') | WORD), ['(', anychar - ')', ')']) | 
+(anychar - '"')
+, '"') | 
+
+WORD
+) 
+}, 
+'\n' | ';' | EOF ;
+
+(* commands start with a word always, or variable expansion to a word *)
+CMDSTART = ('$', (('{', { anychar - '}' }, '}') | WORD), ['(', anychar - ')', ')']) | WORD ;
+
+(* a word is simply a string of alphanumeric characters *)
+(* may include some extra symbols like '*' *)
+WORD = ALNUM, {ALNUM} ;
