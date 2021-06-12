@@ -218,12 +218,14 @@ function getCurrentLevel() {
   return var_list_scoped.length - 1;
 }
 
-function trysub(wrd) {
+function trysub(wrd, level) {
   if('cmdexp' in wrd) {
     wrd = wrd['cmdexp'];
     wrd = wrd.map(x => ({'word': x}));
     wrd[0] = {'start': wrd[0]['word']};
-    return {word: runTCLInterpreter(wrd, getCurrentLevel())};
+    return {word: runTCLInterpreter(wrd, level)};
+  } else if('varexp' in wrd) {
+    return var_list_scoped[level][wrd['varexp']]
   } else {
     return wrd;
   }
@@ -237,7 +239,7 @@ function runTCLInterpreter(tcl_str, level) {
   let lt = undefined;
   if(typeof tcl_str == 'string') {
     lt = new LexTCL(tcl_str);
-  } else {
+  } else { // pre-lexed
     lt = tcl_str;
   }
   
@@ -254,18 +256,19 @@ function runTCLInterpreter(tcl_str, level) {
       let args = lt[++i]['word'];
       let body = lt[++i]['word'];
       proc_list[name['word']] = {args: args['bracket'], body: body['bracket']};
-      console.log(proc_list);
       break;
       case 'set':
       let varname = lt[++i]['word'];
       let valname = '';
       if(!('start' in lt[i + 1])) { // peek ahead to see if set has another parameter
-        valname = trysub(lt[++i]['word']);
+        valname = trysub(lt[++i]['word'], level);
+        var_list_scoped[var_list_scoped.length - 1][varname['word']] = valname;
       }
       
-      var_list_scoped[var_list_scoped.length - 1][varname['word']] = valname;
-      
-      console.log(var_list_scoped);
+      returnstack.push(var_list_scoped[var_list_scoped.length - 1][varname['word']]);
+      break;
+      case 'puts':
+      console.log(trysub(lt[++i]['word'], level)['word']);
       break;
       default:
       console.warn(`error on command ${line_count}: not implemented '${lt[i]['start']['word']}'`);
@@ -273,6 +276,7 @@ function runTCLInterpreter(tcl_str, level) {
       }
     }
   }
+  console.log(returnstack);
 }
 
 let t_script = `proc buildarr {z} {
@@ -291,8 +295,8 @@ proc printArr {a} {
   }
 }
 
-set y [buildarr 10]
+set y 10
 
-puts $y(0)`;
+puts $y`;
 
 runTCLInterpreter(t_script, 0);
