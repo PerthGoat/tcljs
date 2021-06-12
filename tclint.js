@@ -223,6 +223,15 @@ function trysub(wrd, level) {
       return var_list_scoped[level][wrd['varexp']];
     }
     return var_list_scoped[level][wrd['varexp']['word']][wrd['varexp']['index']];
+  } else if('quote' in wrd) {
+    expl = wrd['quote'];
+    
+    for(let i = 0;i < expl.length;i++) {
+      expl[i] = trysub(expl[i], level)['word'];
+    }
+    return {word: expl.join('')};
+  }  else if('qqneutral' in wrd) {
+    return {word: wrd['qqneutral']}
   } else {
     return wrd;
   }
@@ -433,23 +442,17 @@ function runTCLInterpreter(tcl_str, level) {
 
 let t_script = `
 
-proc test {b} {
-  return $b
-}
+set a hello
+set b "$a world"
 
-set a(5) 10
-set a(7) 3
-
-set o [test $a]
-
-puts $o(5)
+puts $b
 
 `;
 
 //console.log(new LexTCL(t_script));
 
 runTCLInterpreter(t_script, 0);
-//console.log(var_list_scoped);
+console.log(var_list_scoped);
 
 function button_hookup() {
   let runval = runTCLInterpreter(document.getElementById('commandbox').value, 0);
