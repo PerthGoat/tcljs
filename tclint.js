@@ -252,7 +252,7 @@ function runTCLInterpreter(tcl_str, level) {
           if('bracket' in args[j]['word']) {
             req_args--;
           } else {
-            args_stack[args[j]['word']['word']] = lt[++i]['word']
+            args_stack[args[j]['word']['word']] = trysub(lt[++i]['word'], level)
           }
         }
         
@@ -289,7 +289,7 @@ function runTCLInterpreter(tcl_str, level) {
       returnstack.push(var_list_scoped[level][varname['word']]);
       break;
       case 'puts':
-      console.log(trysub(lt[++i]['word'], level)['word']);
+      console.log(trysub(lt[++i]['word'], level));
       break;
       case 'return':
       return trysub(lt[++i]['word'], level);
@@ -326,7 +326,7 @@ function runTCLInterpreter(tcl_str, level) {
           break;
         }
       }
-      console.log(math_stack);
+      //console.log(math_stack);
       returnstack.push(math_stack[0]);
       break;
       default:
@@ -355,7 +355,7 @@ set b 7
 
 set a [expr 4.5 1 9 + *]
 
-puts $a
+puts [printArr $a]
 `;
 
 runTCLInterpreter(t_script, 0);
