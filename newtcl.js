@@ -485,6 +485,7 @@ function runTCL(tcs) {
   
   return lastval;
 }
+document.getElementById('code-editor').getElementsByClassName('codes')[0].value = tcsr;
 let t0 = performance.now();
 //runTCL(tcsr);
 let t1 = performance.now();
