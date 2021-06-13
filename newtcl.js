@@ -486,6 +486,6 @@ function runTCL(tcs) {
   return lastval;
 }
 let t0 = performance.now();
-runTCL(tcsr);
+//runTCL(tcsr);
 let t1 = performance.now();
 logColor(`execution finished in ${(t1 - t0) / 1000} seconds`, '#5EBA7D');

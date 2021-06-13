@@ -2,8 +2,71 @@
 
 <html lang='en'>
 <head>
+  <style type='text/css'>
+    #code-editor .linenum {
+      overflow:hidden;
+      resize:none;
+      text-align:right;
+    }
+  </style>
 </head>
 <body>
+  <div id='code-editor'>
+  <textarea class='linenum' readonly></textarea>
+  <textarea class='codes'>hi
+  
+  ho</textarea>
+  </div>
+  <script type='text/javascript'>
+    function renumber_box() {
+      c_lines.value = '';
+      let cc = c_text.value;
+    
+      let lines = cc.match(/\n/g).length + 1;
+      
+      let line_str = '';
+      
+      for(let i = 0;i < lines;i++) {
+        line_str += i + 1 + '\n';
+      }
+      
+      c_lines.value = line_str;
+      c_lines.scrollTop = c_text.scrollTop;
+    }
+  
+    let code_editor = document.getElementById('code-editor');
+    
+    let c_lines = code_editor.getElementsByClassName('linenum')[0];
+    let c_text = code_editor.getElementsByClassName('codes')[0];
+    c_text.style.width = '800px';
+    c_text.style.height = '600px';
+    
+    let rect = c_text.getBoundingClientRect();
+    
+    let h = c_text.style.height;
+    
+    c_lines.style.width = '30px';
+    c_lines.style.height = h;
+    
+    renumber_box();
+    
+    c_text.addEventListener('change', () => {
+      renumber_box();
+    });
+    
+    c_text.addEventListener('keyup', () => {
+      renumber_box();
+    });
+    
+    c_text.addEventListener('paste', () => {
+      renumber_box();
+    });
+    
+    c_text.addEventListener('scroll', () => {
+      renumber_box();
+    });
+    
+  </script>
   <script type='text/javascript' src='newtcl.js'></script>
 </body>
 </html>
