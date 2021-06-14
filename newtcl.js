@@ -222,7 +222,8 @@ set oy 0
 
 while {1 1 =} {
   set key [keyin]
-  if {$key 47 >} {
+  if {[expr $key 47 >] [expr $key 57 <] =} {
+    puts [expr [expr $key 47 >] [expr $key 57 <] =]
     drawLetterBlock [expr $key 48 -] $ox $oy
     set ox [expr $ox 5 +]
     if {$ox 64 >} {
@@ -466,6 +467,9 @@ async function runCmd(cl) {
     for(let i = 1;i < cl.length;i++) {
       if(!isNaN(parseFloat(cl[i]))) {
         math_stack.push(parseFloat(cl[i]));
+      }
+      else if(cl[i] == 'true' || cl[i] == 'false') {
+        math_stack.push(cl[i]);
       } else {
         switch(cl[i]) {
           case '+':
