@@ -49,6 +49,11 @@
       c_lines.value = line_str;
       c_lines.scrollTop = c_text.scrollTop;
     }
+    
+    function resize_box() {
+      c_lines.style.height = c_text.style.height;
+      c_res.style.width = (c_text.getBoundingClientRect().width + c_lines.getBoundingClientRect().width) + 'px';
+    }
   
     let code_editor = document.getElementById('code-editor');
     
@@ -59,18 +64,11 @@
     c_text.style.width = '800px';
     c_text.style.height = '600px';
     
-    let rect = c_text.getBoundingClientRect();
-    
-    let h = c_text.style.height;
-    
     c_lines.style.width = '30px';
-    c_lines.style.height = h;
     
-    let rect2 = c_lines.getBoundingClientRect();
-    
-    c_res.style.width = (rect.width + rect2.width) + 'px';
     c_res.style.height = '200px'
     
+    resize_box();
     renumber_box();
     
     c_text.addEventListener('change', () => {
@@ -88,6 +86,8 @@
     c_text.addEventListener('scroll', () => {
       renumber_box();
     });
+    
+    new ResizeObserver(resize_box).observe(c_text);
     
   </script>
 </body>
