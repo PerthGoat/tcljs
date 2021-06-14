@@ -164,9 +164,8 @@ set x(2) 2
 
 # puts $x(1)
 
-arrayTest $x
-# puts [tan 4]
-`;
+arrayTeast $x
+# puts [tan 4]`;
 
 function isAlphaNum(s) {
   return s.match(/^[a-z0-9+-/*.=><()$#]+$/i);
@@ -395,12 +394,10 @@ function runTCL(tcs) {
         cmd_list.push(sb);
         sb = '';
       }
-      if(tcs[i] == '\n') {
-        current_line++;
-      }
       if((tcs[i] == '\n' || tcs[i] == ';') && cmd_list.length > 0) {
         if(cmd_list[0][0] == '#') {
           cmd_list = [];
+          current_line++;
           continue;
         }
         let cmd_result = runCmd(cmd_list);
@@ -412,6 +409,7 @@ function runTCL(tcs) {
         //console.log(cmd_list);
         cmd_list = [];
       }
+      if(tcs[i] == '\n') current_line++;
       continue;
     }
     
@@ -425,6 +423,7 @@ function runTCL(tcs) {
         watch--;
       }
       while(watch != 0) {
+        if(tcs[i] == '\n') current_line++;
         sb += tcs[i];
         i++;
         if(tcs[i] == ']') {
@@ -442,6 +441,7 @@ function runTCL(tcs) {
         watch--;
       }
       while(watch != 0) {
+        if(tcs[i] == '\n') current_line++;
         sb += tcs[i];
         i++;
         if(tcs[i] == '}') {
@@ -455,6 +455,7 @@ function runTCL(tcs) {
       sb += tcs[i];
       i++;
       while(tcs[i] != '"') {
+        if(tcs[i] == '\n') current_line++;
         sb += tcs[i];
         i++;
       }
@@ -475,6 +476,11 @@ function runTCL(tcs) {
   }
   
   if(cmd_list.length > 0) {
+    if(cmd_list[0][0] == '#') {
+      cmd_list = [];
+      current_line++;
+      return lastval;
+    }
     let cmd_result = runCmd(cmd_list);
     if(cmd_result.startsWith('error')) {
       console.warn(`${cmd_result} on line ${current_line}`);
@@ -487,6 +493,6 @@ function runTCL(tcs) {
 }
 document.getElementById('code-editor').getElementsByClassName('codes')[0].value = tcsr;
 let t0 = performance.now();
-//runTCL(tcsr);
+runTCL(tcsr);
 let t1 = performance.now();
 logColor(`execution finished in ${(t1 - t0) / 1000} seconds`, '#5EBA7D');
