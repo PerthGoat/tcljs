@@ -157,62 +157,69 @@ proc tan {x} {
 let tcsr = `
 
 
-proc blinkon {} {
+proc blinkon {offset} {
   set x 0
-  while {$x 10 <} {
+  while {$x 4 <} {
     set y 0
-    while {$y 10 <} {
-      putpixel $x $y 0 0 0
+    while {$y 5 <} {
+      putpixel [expr $x $offset +] $y 0 0 0
       incr y
     }
     incr x
   }
 }
 
-proc blinkoff {} {
+proc blinkoff {offset} {
   set x 0
-  while {$x 10 <} {
+  while {$x 4 <} {
     set y 0
-    while {$y 10 <} {
-      putpixel $x $y 255 255 255
+    while {$y 5 <} {
+      putpixel [expr $x $offset +] $y 255 255 255
       incr y
     }
     incr x
   }
 }
 
-proc blinkloop {} {
-  blinkon
+proc blinkloop {offset} {
+  blinkon $offset
   sleep 100
-  blinkoff
+  blinkoff $offset
   sleep 100
 }
 
 proc getBlockFromIndex {index} {
-  set block1 "11111001100110011111"
-  return $block1
+  set block(0) "11111001100110011111"
+  set block(1) "00100110001000100111"
+  return $block($index)
 }
 
-#for {set j 0} {$j 20 <} {incr j} {
-#  blinkloop
-#  if {[keyin] 99 =} {
-#    puts ya
-#  }
-#}
-
-
-set blk [getBlockFromIndex 0]
-
-set y 0
-for {set i 0} {$i 20 <} {incr i} {
-  set x [expr $i 4 %]
-  if {0 $x =} {
-    if {$i 0 =} {} {
-      incr y
+proc drawLetterBlock {index offset} {
+  set blk [getBlockFromIndex $index]
+  set y 0
+  for {set i 0} {$i 20 <} {incr i} {
+    set x [expr $i 4 %]
+    if {0 $x =} {
+      if {$i 0 =} {} {
+        incr y
+      }
     }
+    set color [expr 255 [expr $blk($i) 255 *] -]
+    putpixel [expr $x $offset +] $y $color $color $color
   }
-  set color [expr 255 [expr $blk($i) 255 *] -]
-  putpixel $x $y $color $color $color
+}
+
+set ox 0
+
+while {1 1 =} {
+  set key [keyin]
+  if {$key 47 >} {
+    drawLetterBlock [expr $key 48 -] $ox
+    set ox [expr $ox 5 +]
+    sleep 100
+  } {
+    blinkloop $ox
+  }
 }
 
 `;
@@ -260,9 +267,15 @@ async function runSub(w) {
       let spl = w.split('(');
       let name = spl[0];
       let index = await runSub(spl[1].substring(0, spl[1].length - 1));
+      if(varstack[exec_level][name] == undefined) {
+        return `error var ${name} not initialized`;
+      }
       //console.log(varstack[exec_level][name]);
       return varstack[exec_level][name][index];
     } else {
+      if(varstack[exec_level][w] == undefined) {
+        return `error var ${w} not initialized`;
+      }
       return varstack[exec_level][w];
     }
   }
@@ -323,6 +336,9 @@ async function runCmd(cl) {
   if (debug) logColor(cl, '#E66');
   for(let i = 0;i < cl.length;i++) {
     cl[i] = await runSub(cl[i]);
+    if(cl[i].startsWith('error')) {
+      return cl[i];
+    }
   }
   if (debug) logColor(cl, '#BBB');
   if (cl[0] in procstack) {
@@ -640,6 +656,7 @@ async function runTclButton() {
   addToResultBox('START');
   let t0 = performance.now();
   resetS();
+  current_line[0] -= standard_library.match(/\n/g).length;
   let t_result = await runTCL(standard_library + code);
   
   if(t_result.startsWith('error')) {
