@@ -155,86 +155,11 @@ proc tan {x} {
 `;
 
 let tcsr = `
+set a 0
 
-
-proc blinkon {offsetx offsety} {
-  set x 0
-  while {$x 4 <} {
-    set y 0
-    while {$y 5 <} {
-      putpixel [expr $x $offsetx +] [expr $y $offsety +] 0 0 0
-      incr y
-    }
-    incr x
-  }
+if {$a 0 =} {
+  puts ha
 }
-
-proc blinkoff {offsetx offsety} {
-  set x 0
-  while {$x 4 <} {
-    set y 0
-    while {$y 5 <} {
-      putpixel [expr $x $offsetx +] [expr $y $offsety +] 255 255 255
-      incr y
-    }
-    incr x
-  }
-}
-
-proc blinkloop {offsetx offsety} {
-  blinkon $offsetx $offsety
-  sleep 100
-  blinkoff $offsetx $offsety
-  sleep 100
-}
-
-proc getBlockFromIndex {index} {
-  set block(0) "11111001100110011111"
-  set block(1) "00100110001000100111"
-  set block(2) "11110001111110001111"
-  set block(3) "11110001111100011111"
-  set block(4) "10011001111100010001"
-  set block(5) "11111000111100011111"
-  set block(6) "11111000111110011111"
-  set block(7) "11110001001001000100"
-  set block(8) "11111001111110011111"
-  set block(9) "11111001111100011111"
-  return $block($index)
-}
-
-proc drawLetterBlock {index offsetx offsety} {
-  set blk [getBlockFromIndex $index]
-  set y 0
-  for {set i 0} {$i 20 <} {incr i} {
-    set x [expr $i 4 %]
-    if {0 $x =} {
-      if {$i 0 =} {} {
-        incr y
-      }
-    }
-    set color [expr 255 [expr $blk($i) 255 *] -]
-    putpixel [expr $x $offsetx +] [expr $y $offsety +] $color $color $color
-  }
-}
-
-set ox 0
-set oy 0
-
-while {1 1 =} {
-  set key [keyin]
-  if {$key 47 >} {
-    drawLetterBlock [expr $key 48 -] $ox $oy
-    set ox [expr $ox 5 +]
-    if {$ox 64 >} {
-      set ox 0
-      set oy [expr $oy 6 +]
-    }
-    sleep 100
-  } {
-    blinkloop $ox $oy
-  }
-}
-
 `;
 
 function isAlphaNum(s) {
@@ -253,7 +178,6 @@ let exec_level = 0;
 varstack.push({});
 
 // debugging
-let current_line = [1]; // holds the current line for debugging
 let exec_name = ['MAIN']; // holds the current exec name for debugging
 
 // keypress stuff
@@ -266,7 +190,6 @@ function resetS() {
   varstack.push({});
 
   // debugging
-  current_line = [1]; // holds the current line for debugging
   exec_name = ['MAIN']; // holds the current exec name for debugging
 }
 
@@ -365,7 +288,7 @@ async function runCmd(cl) {
     }
     exec_level++;
     
-    current_line.push(1); exec_name.push(cl[0]);
+    exec_name.push(cl[0]);
     varstack.push({});
     //console.log(cl[1]);
     for(let i = 0;i < args.length;i++) {
@@ -376,7 +299,7 @@ async function runCmd(cl) {
     let proc_result = await runTCL(proc['procbody']);
     
     varstack.pop();
-    current_line.pop(); exec_name.pop();
+    exec_name.pop();
     
     exec_level--;
     //console.log(proc);
@@ -441,7 +364,6 @@ async function runCmd(cl) {
       let whilestatement = cl[1];
       let whilebody = cl[2];
       while(await runTCL('expr ' + whilestatement) == 'true') {
-        current_line[exec_level] -= whilebody.match(/\n/g).length + 2;
         let res = await runTCL(whilebody);
         if(res.startsWith('error')) {
           return res;
@@ -451,9 +373,7 @@ async function runCmd(cl) {
     case 'uplevel':
     if (debug) logColor('UPLEVEL START', '#FF0');
     exec_level--;
-    current_line.push(1);
     let tc_res = await runTCL(cl[1]);
-    current_line.pop();
     exec_level++;
     //console.log(exec_name);
     if (debug) logColor('UPLEVEL END', '#FF0');
@@ -524,6 +444,8 @@ async function runTCL(tcs) {
 
   let cmd_list = [];
   
+  let mylinecount = 0;
+  
   let lastval = '';
   
   for(let i = 0;i < tcs.length;i++) {
@@ -535,15 +457,12 @@ async function runTCL(tcs) {
       if((tcs[i] == '\n' || tcs[i] == ';') && cmd_list.length > 0) {
         if(cmd_list[0][0] == '#') {
           cmd_list = [];
-          current_line[exec_level]++;
+          mylinecount++;
           continue;
         }
         let cmd_result = await runCmd(cmd_list);
         if(cmd_result.startsWith('error')) {
-          let error_build = `${cmd_result} in ${exec_name[exec_level]} on line ${current_line[exec_level]}`
-          for(let c = exec_level - 1;c >= 0;c--) {
-            error_build += `\n\tcalled from line ${current_line[c]} in ${exec_name[c]}`;
-          }
+          let error_build = `${cmd_result} in ${exec_name[exec_level]} on line ${mylinecount}`;
           addToResultBox(error_build);
           
           return cmd_result;
@@ -553,7 +472,7 @@ async function runTCL(tcs) {
         //console.log(cmd_list);
         cmd_list = [];
       }
-      if(tcs[i] == '\n') current_line[exec_level]++;
+      if(tcs[i] == '\n') mylinecount++;
       continue;
     }
     
@@ -567,7 +486,7 @@ async function runTCL(tcs) {
         watch--;
       }
       while(watch != 0 && i < tcs.length) {
-        if(tcs[i] == '\n') current_line[exec_level]++;
+        if(tcs[i] == '\n') mylinecount++;
         sb += tcs[i];
         i++;
         if(tcs[i] == ']') {
@@ -588,7 +507,7 @@ async function runTCL(tcs) {
         watch--;
       }
       while(watch != 0 && i < tcs.length) {
-        if(tcs[i] == '\n') current_line[exec_level]++;
+        if(tcs[i] == '\n') mylinecount++;
         sb += tcs[i];
         i++;
         if(tcs[i] == '}') {
@@ -605,7 +524,7 @@ async function runTCL(tcs) {
       sb += tcs[i];
       i++;
       while(tcs[i] != '"' && i < tcs.length) {
-        if(tcs[i] == '\n') current_line[exec_level]++;
+        if(tcs[i] == '\n') mylinecount++;
         sb += tcs[i];
         i++;
       }
@@ -631,15 +550,12 @@ async function runTCL(tcs) {
   if(cmd_list.length > 0) {
     if(cmd_list[0][0] == '#') {
       cmd_list = [];
-      current_line[exec_level]++;
+      mylinecount++;
       return lastval;
     }
     let cmd_result = await runCmd(cmd_list);
     if(cmd_result.startsWith('error')) {
-      let error_build = `${cmd_result} in ${exec_name[exec_level]} on line ${current_line[exec_level]}`
-      for(let c = exec_level - 1;c >= 0;c--) {
-        error_build += `\n\tcalled from line ${current_line[c]} in ${exec_name[c]}`;
-      }
+      let error_build = `${cmd_result} in ${exec_name[exec_level]} on line ${mylinecount}`;
       addToResultBox(error_build);
       
       return cmd_result;
@@ -676,17 +592,8 @@ async function runTclButton() {
   addToResultBox('START');
   let t0 = performance.now();
   resetS();
-  current_line[0] -= standard_library.match(/\n/g).length;
-  let t_result = await runTCL(standard_library + code);
-  
-  if(t_result.startsWith('error')) {
-    let error_build = `${t_result} in ${exec_name[exec_level]} on line ${current_line[exec_level]}`
-    for(let c = exec_level - 1;c >= 0;c--) {
-      error_build += `\n\tcalled from line ${current_line[c]} in ${exec_name[c]}`;
-    }
-    addToResultBox(error_build);
-    //console.warn(error_build);
-  }
+  await runTCL(standard_library);
+  let t_result = await runTCL(code);
   
   let t1 = performance.now();
   logColor(`execution finished in ${(t1 - t0) / 1000} seconds`, '#5EBA7D');
