@@ -13,6 +13,11 @@
     #code-editor .codes {
       background-color:lightblue;
     }
+    
+    #result .resbox {
+      resize:none;
+    }
+    
   </style>
 </head>
 <body>
@@ -20,6 +25,10 @@
   <textarea class='linenum' readonly></textarea>
   <textarea class='codes'></textarea>
   </div>
+  <div id='result'>
+  <textarea class='resbox' readonly></textarea>
+  </div>
+  <button onclick='runTclButton()'>run</button>
   <script type='text/javascript' src='newtcl.js'></script>
   <script type='text/javascript'>
     function renumber_box() {
@@ -45,6 +54,8 @@
     
     let c_lines = code_editor.getElementsByClassName('linenum')[0];
     let c_text = code_editor.getElementsByClassName('codes')[0];
+    let c_res = document.getElementById('result').getElementsByClassName('resbox')[0];
+    
     c_text.style.width = '800px';
     c_text.style.height = '600px';
     
@@ -54,6 +65,11 @@
     
     c_lines.style.width = '30px';
     c_lines.style.height = h;
+    
+    let rect2 = c_lines.getBoundingClientRect();
+    
+    c_res.style.width = (rect.width + rect2.width) + 'px';
+    c_res.style.height = '200px'
     
     renumber_box();
     

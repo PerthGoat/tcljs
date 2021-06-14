@@ -165,8 +165,6 @@ set x(2) 2
 
 # puts $x(1)
 
-set a {
-
 #arrayTest $x
 # puts [tan 4]`;
 
@@ -306,6 +304,7 @@ function runCmd(cl) {
     break;
     case 'puts':
     logColor('\t\n\t' + cl[1], '#BAF');
+    addToResultBox('\=> ' + cl[1]);
     break;
     case 'if':
       let ifstatement = cl[1];
@@ -416,7 +415,7 @@ function runTCL(tcs) {
             error_build += `\n\tcalled from line ${current_line[c]} in ${exec_name[c]}`;
           }
           
-          console.warn(error_build);
+          addToResultBox(error_build);
           
         } else {
           lastval = cmd_result;
@@ -507,7 +506,7 @@ function runTCL(tcs) {
     }
     let cmd_result = runCmd(cmd_list);
     if(cmd_result.startsWith('error')) {
-      console.warn(`${cmd_result} on line ${current_line[exec_level]}`);
+      addToResultBox(`${cmd_result} on line ${current_line[exec_level]}`);
     } else {
       lastval = cmd_result;
     }
@@ -516,6 +515,7 @@ function runTCL(tcs) {
   return lastval;
 }
 document.getElementById('code-editor').getElementsByClassName('codes')[0].value = tcsr;
+/*
 let t0 = performance.now();
 let t_result = runTCL(tcsr);
 if(t_result.startsWith('error')) {
@@ -527,4 +527,30 @@ if(t_result.startsWith('error')) {
 }
 
 let t1 = performance.now();
-logColor(`execution finished in ${(t1 - t0) / 1000} seconds`, '#5EBA7D');
+logColor(`execution finished in ${(t1 - t0) / 1000} seconds`, '#5EBA7D');*/
+
+function addToResultBox(s) {
+  let c_res = document.getElementById('result').getElementsByClassName('resbox')[0];
+  c_res.value += s + '\n';
+  c_res.scrollTop = c_res.scrollHeight;
+}
+
+function runTclButton() {
+  let code = document.getElementById('code-editor').getElementsByClassName('codes')[0].value;
+  addToResultBox('START');
+  let t0 = performance.now();
+  let t_result = runTCL(code);
+  
+  if(t_result.startsWith('error')) {
+    let error_build = `${t_result} in ${exec_name[exec_level]} on line ${current_line[exec_level]}`
+    for(let c = exec_level - 1;c >= 0;c--) {
+      error_build += `\n\tcalled from line ${current_line[c]} in ${exec_name[c]}`;
+    }
+    addToResultBox(error_build);
+    //console.warn(error_build);
+  }
+  
+  let t1 = performance.now();
+  logColor(`execution finished in ${(t1 - t0) / 1000} seconds`, '#5EBA7D');
+  addToResultBox(`execution finished in ${(t1 - t0) / 1000} seconds\n`);
+}
