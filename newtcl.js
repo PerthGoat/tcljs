@@ -157,44 +157,52 @@ proc tan {x} {
 let tcsr = `
 
 
-proc blinkon {offset} {
+proc blinkon {offsetx offsety} {
   set x 0
   while {$x 4 <} {
     set y 0
     while {$y 5 <} {
-      putpixel [expr $x $offset +] $y 0 0 0
+      putpixel [expr $x $offsetx +] [expr $y $offsety +] 0 0 0
       incr y
     }
     incr x
   }
 }
 
-proc blinkoff {offset} {
+proc blinkoff {offsetx offsety} {
   set x 0
   while {$x 4 <} {
     set y 0
     while {$y 5 <} {
-      putpixel [expr $x $offset +] $y 255 255 255
+      putpixel [expr $x $offsetx +] [expr $y $offsety +] 255 255 255
       incr y
     }
     incr x
   }
 }
 
-proc blinkloop {offset} {
-  blinkon $offset
+proc blinkloop {offsetx offsety} {
+  blinkon $offsetx $offsety
   sleep 100
-  blinkoff $offset
+  blinkoff $offsetx $offsety
   sleep 100
 }
 
 proc getBlockFromIndex {index} {
   set block(0) "11111001100110011111"
   set block(1) "00100110001000100111"
+  set block(2) "11110001111110001111"
+  set block(3) "11110001111100011111"
+  set block(4) "10011001111100010001"
+  set block(5) "11111000111100011111"
+  set block(6) "11111000111110011111"
+  set block(7) "11110001001001000100"
+  set block(8) "11111001111110011111"
+  set block(9) "11111001111100011111"
   return $block($index)
 }
 
-proc drawLetterBlock {index offset} {
+proc drawLetterBlock {index offsetx offsety} {
   set blk [getBlockFromIndex $index]
   set y 0
   for {set i 0} {$i 20 <} {incr i} {
@@ -205,20 +213,25 @@ proc drawLetterBlock {index offset} {
       }
     }
     set color [expr 255 [expr $blk($i) 255 *] -]
-    putpixel [expr $x $offset +] $y $color $color $color
+    putpixel [expr $x $offsetx +] [expr $y $offsety +] $color $color $color
   }
 }
 
 set ox 0
+set oy 0
 
 while {1 1 =} {
   set key [keyin]
   if {$key 47 >} {
-    drawLetterBlock [expr $key 48 -] $ox
+    drawLetterBlock [expr $key 48 -] $ox $oy
     set ox [expr $ox 5 +]
+    if {$ox 64 >} {
+      set ox 0
+      set oy [expr $oy 6 +]
+    }
     sleep 100
   } {
-    blinkloop $ox
+    blinkloop $ox $oy
   }
 }
 
