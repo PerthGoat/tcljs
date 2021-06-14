@@ -231,6 +231,10 @@ while {1 1 =} {
     }
     sleep 100
   } {
+    if {$key 69 =} {
+      set ox 0
+      set oy [expr $oy 6 +]
+    }
     blinkloop $ox $oy
   }
 }
