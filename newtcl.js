@@ -223,7 +223,6 @@ set oy 0
 while {1 1 =} {
   set key [keyin]
   if {[expr $key 47 >] [expr $key 57 <] =} {
-    puts [expr [expr $key 47 >] [expr $key 57 <] =]
     drawLetterBlock [expr $key 48 -] $ox $oy
     set ox [expr $ox 5 +]
     if {$ox 64 >} {
@@ -519,6 +518,10 @@ async function runCmd(cl) {
 }
 
 async function runTCL(tcs) {
+  if(!running) {
+    return 'error execution halted'; // currently this sometimes misses if an if statement is running an expr
+  }
+  
   let sb = '';
 
   let cmd_list = [];
@@ -666,7 +669,12 @@ function addToResultBox(s) {
   c_res.scrollTop = c_res.scrollHeight;
 }
 
+let running = false;
 async function runTclButton() {
+  if (running) {
+    return;
+  }
+  running = true;
   let code = document.getElementById('code-editor').getElementsByClassName('codes')[0].value;
   addToResultBox('START');
   let t0 = performance.now();
@@ -677,6 +685,10 @@ async function runTclButton() {
   let t1 = performance.now();
   logColor(`execution finished in ${(t1 - t0) / 1000} seconds`, '#5EBA7D');
   addToResultBox(`execution finished in ${(t1 - t0) / 1000} seconds\n`);
+}
+
+function stopTCL() {
+  running = false;
 }
 
 window.onkeypress = (e) => {
