@@ -415,17 +415,24 @@ async function runCmd(cl) {
       let ifstatement = cl[1];
       let ifbody = cl[2];
       let elsebody = cl[3];
+      let res = '';
       if(await runTCL('expr ' + ifstatement) == 'true') {
-        await runTCL(ifbody);
+        res = await runTCL(ifbody);
       } else if(elsebody != undefined) {
-        await runTCL(elsebody);
+        res = await runTCL(elsebody);
       }
+      
+      if(res.startsWith('error')) return res;
     break;
     case 'while':
       let whilestatement = cl[1];
       let whilebody = cl[2];
       while(await runTCL('expr ' + whilestatement) == 'true') {
-        await runTCL(whilebody);
+        current_line[exec_level] -= whilebody.match(/\n/g).length + 2;
+        let res = await runTCL(whilebody);
+        if(res.startsWith('error')) {
+          return res;
+        }
       }
     break;
     case 'uplevel':
@@ -505,7 +512,7 @@ async function runTCL(tcs) {
   let cmd_list = [];
   
   let lastval = '';
-
+  
   for(let i = 0;i < tcs.length;i++) {
     if (tcs[i] == ' ' || tcs[i] == '\n' || tcs[i] == ';') {
       if(sb != '') {
@@ -524,9 +531,9 @@ async function runTCL(tcs) {
           for(let c = exec_level - 1;c >= 0;c--) {
             error_build += `\n\tcalled from line ${current_line[c]} in ${exec_name[c]}`;
           }
-          
           addToResultBox(error_build);
           
+          return cmd_result;
         } else {
           lastval = cmd_result;
         }
@@ -620,9 +627,9 @@ async function runTCL(tcs) {
       for(let c = exec_level - 1;c >= 0;c--) {
         error_build += `\n\tcalled from line ${current_line[c]} in ${exec_name[c]}`;
       }
-      
       addToResultBox(error_build);
       
+      return cmd_result;
     } else {
       lastval = cmd_result;
     }
