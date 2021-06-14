@@ -165,7 +165,9 @@ set x(2) 2
 
 # puts $x(1)
 
-arrayTest $x
+set a {
+
+#arrayTest $x
 # puts [tan 4]`;
 
 function isAlphaNum(s) {
@@ -435,7 +437,7 @@ function runTCL(tcs) {
       if(tcs[i] == ']') {
         watch--;
       }
-      while(watch != 0) {
+      while(watch != 0 && i < tcs.length) {
         if(tcs[i] == '\n') current_line[exec_level]++;
         sb += tcs[i];
         i++;
@@ -445,6 +447,9 @@ function runTCL(tcs) {
           watch++;
         }
       }
+      if(tcs[i] != ']') {
+        return 'error start square bracket without end square bracket';
+      }
       sb += tcs[i];
     } else if(tcs[i] == '{') {
       sb += tcs[i];
@@ -453,7 +458,7 @@ function runTCL(tcs) {
       if(tcs[i] == '}') {
         watch--;
       }
-      while(watch != 0) {
+      while(watch != 0 && i < tcs.length) {
         if(tcs[i] == '\n') current_line[exec_level]++;
         sb += tcs[i];
         i++;
@@ -463,21 +468,27 @@ function runTCL(tcs) {
           watch++;
         }
       }
+      if(tcs[i] != '}') {
+        return 'error start curly bracket without end curly bracket';
+      }
       sb += tcs[i];
     } else if(tcs[i] == '"') {
       sb += tcs[i];
       i++;
-      while(tcs[i] != '"') {
+      while(tcs[i] != '"' && i < tcs.length) {
         if(tcs[i] == '\n') current_line[exec_level]++;
         sb += tcs[i];
         i++;
+      }
+      if(tcs[i] != '"') {
+        return 'error start quote without end quote';
       }
       sb += tcs[i];
     } else if(tcs[i] == '\\') {
       sb += tcs[++i];
     }
     else {
-      console.warn(`invalid char ${tcs[i]}`);
+      return `error invalid char ${tcs[i]}`;
       //break;
     }
     
@@ -506,6 +517,14 @@ function runTCL(tcs) {
 }
 document.getElementById('code-editor').getElementsByClassName('codes')[0].value = tcsr;
 let t0 = performance.now();
-runTCL(tcsr);
+let t_result = runTCL(tcsr);
+if(t_result.startsWith('error')) {
+  let error_build = `${t_result} in ${exec_name[exec_level]} on line ${current_line[exec_level]}`
+  for(let c = exec_level - 1;c >= 0;c--) {
+    error_build += `\n\tcalled from line ${current_line[c]} in ${exec_name[c]}`;
+  }
+  console.warn(error_build);
+}
+
 let t1 = performance.now();
 logColor(`execution finished in ${(t1 - t0) / 1000} seconds`, '#5EBA7D');
