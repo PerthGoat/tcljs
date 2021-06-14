@@ -18,17 +18,35 @@
       resize:none;
     }
     
+    #screen {
+      float:right;
+      width:380px;
+      height:380px;
+      border:1px solid black;
+      overflow:none;
+    }
+    
+    #screen #screenout {
+      width:100%;
+      height:100%;
+    }
+    
   </style>
 </head>
 <body>
-  <div id='code-editor'>
-  <textarea class='linenum' readonly></textarea>
-  <textarea class='codes'></textarea>
+  <div id='codearea'>
+    <div id='screen'>
+      <canvas id='screenout'></canvas>
+    </div>
+    <div id='code-editor'>
+    <textarea class='linenum' readonly></textarea>
+    <textarea class='codes'></textarea>
+    </div>
+    <div id='result'>
+    <textarea class='resbox' readonly></textarea>
+    </div>
+    <button onclick='runTclButton()'>run</button>
   </div>
-  <div id='result'>
-  <textarea class='resbox' readonly></textarea>
-  </div>
-  <button onclick='runTclButton()'>run</button>
   <script type='text/javascript' src='newtcl.js'></script>
   <script type='text/javascript'>
     function renumber_box() {

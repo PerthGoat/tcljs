@@ -177,9 +177,20 @@ let procstack = {};
 let exec_level = 0;
 varstack.push({});
 
-// degbugging
+// debugging
 let current_line = [1]; // holds the current line for debugging
 let exec_name = ['MAIN']; // holds the current exec name for debugging
+
+function resetS() {
+  varstack = [];
+  procstack = {};
+  exec_level = 0;
+  varstack.push({});
+
+  // debugging
+  current_line = [1]; // holds the current line for debugging
+  exec_name = ['MAIN']; // holds the current exec name for debugging
+}
 
 function runSub(w) {
   if(w[0] == '{') {
@@ -539,6 +550,7 @@ function runTclButton() {
   let code = document.getElementById('code-editor').getElementsByClassName('codes')[0].value;
   addToResultBox('START');
   let t0 = performance.now();
+  resetS();
   let t_result = runTCL(code);
   
   if(t_result.startsWith('error')) {
