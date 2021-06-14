@@ -175,8 +175,11 @@ function isAlphaNum(s) {
 let varstack = [];
 let procstack = {};
 let exec_level = 0;
-let current_line = [1];
 varstack.push({});
+
+// degbugging
+let current_line = [1]; // holds the current line for debugging
+let exec_name = ['MAIN']; // holds the current exec name for debugging
 
 function runSub(w) {
   if(w[0] == '{') {
@@ -264,7 +267,7 @@ function runCmd(cl) {
     }
     exec_level++;
     
-    current_line.push(1);
+    current_line.push(1); exec_name.push(cl[0]);
     varstack.push({});
     //console.log(cl[1]);
     for(let i = 0;i < args.length;i++) {
@@ -275,7 +278,7 @@ function runCmd(cl) {
     let proc_result = runTCL(proc['procbody']);
     
     varstack.pop();
-    current_line.pop();
+    current_line.pop(); exec_name.pop();
     
     exec_level--;
     //console.log(proc);
@@ -406,9 +409,9 @@ function runTCL(tcs) {
         }
         let cmd_result = runCmd(cmd_list);
         if(cmd_result.startsWith('error')) {
-          let error_build = `${cmd_result} on line ${current_line[exec_level]}`
+          let error_build = `${cmd_result} in ${exec_name[exec_level]} on line ${current_line[exec_level]}`
           for(let c = exec_level - 1;c >= 0;c--) {
-            error_build += ` called from line ${current_line[c]}`;
+            error_build += `\n\tcalled from line ${current_line[c]} in ${exec_name[c]}`;
           }
           
           console.warn(error_build);
