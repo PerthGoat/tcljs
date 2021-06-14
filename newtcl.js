@@ -181,10 +181,18 @@ proc blinkoff {} {
   }
 }
 
+proc blinkloop {} {
+  blinkon
+  sleep 100
+  blinkoff
+  sleep 100
+}
+
 for {set j 0} {$j 20 <} {incr j} {
-blinkon
-sleep 100
-blinkoff
+  blinkloop
+  if {[keyin] 99 =} {
+    puts ya
+  }
 }
 
 
@@ -208,6 +216,9 @@ varstack.push({});
 // debugging
 let current_line = [1]; // holds the current line for debugging
 let exec_name = ['MAIN']; // holds the current exec name for debugging
+
+// keypress stuff
+let last_key_pressed = 0;
 
 function resetS() {
   varstack = [];
@@ -359,6 +370,11 @@ async function runCmd(cl) {
     break;
     case 'sleep':
     await sleep(parseFloat(cl[1]));
+    break;
+    case 'keyin':
+      let kp = last_key_pressed;
+      last_key_pressed = '';
+      return '' + kp;
     break;
     case 'if':
       let ifstatement = cl[1];
@@ -616,3 +632,7 @@ async function runTclButton() {
   logColor(`execution finished in ${(t1 - t0) / 1000} seconds`, '#5EBA7D');
   addToResultBox(`execution finished in ${(t1 - t0) / 1000} seconds\n`);
 }
+
+window.onkeypress = (e) => {
+  last_key_pressed = e.key.charCodeAt(0);
+};
