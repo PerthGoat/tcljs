@@ -29,6 +29,7 @@
     #screen #screenout {
       width:100%;
       height:100%;
+      image-rendering:pixelated;
     }
     
   </style>
@@ -36,7 +37,7 @@
 <body>
   <div id='codearea'>
     <div id='screen'>
-      <canvas id='screenout'></canvas>
+      <canvas id='screenout' width='64px' height='64px'></canvas>
     </div>
     <div id='code-editor'>
     <textarea class='linenum' readonly></textarea>

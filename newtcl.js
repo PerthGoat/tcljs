@@ -188,18 +188,37 @@ proc blinkloop {} {
   sleep 100
 }
 
-for {set j 0} {$j 20 <} {incr j} {
-  blinkloop
-  if {[keyin] 99 =} {
-    puts ya
-  }
+proc getBlockFromIndex {index} {
+  set block1 "11111001100110011111"
+  return $block1
 }
 
+#for {set j 0} {$j 20 <} {incr j} {
+#  blinkloop
+#  if {[keyin] 99 =} {
+#    puts ya
+#  }
+#}
+
+
+set blk [getBlockFromIndex 0]
+
+set y 0
+for {set i 0} {$i 20 <} {incr i} {
+  set x [expr $i 4 %]
+  if {0 $x =} {
+    if {$i 0 =} {} {
+      incr y
+    }
+  }
+  set color [expr 255 [expr $blk($i) 255 *] -]
+  putpixel $x $y $color $color $color
+}
 
 `;
 
 function isAlphaNum(s) {
-  return s.match(/^[a-z0-9+-/*.=><()$#]+$/i);
+  return s.match(/^[a-z0-9+-/*.=><()$#%]+$/i);
 }
 
 function sleep(ms) {
@@ -444,6 +463,10 @@ async function runCmd(cl) {
           break;
           case '<':
           math_stack[math_stack.length - 2] = math_stack[math_stack.length - 2] < math_stack[math_stack.length - 1];
+          math_stack.pop();
+          break;
+          case '%':
+          math_stack[math_stack.length - 2] = math_stack[math_stack.length - 2] % math_stack[math_stack.length - 1];
           math_stack.pop();
           break;
         }
