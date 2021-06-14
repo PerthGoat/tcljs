@@ -267,7 +267,7 @@ async function runSub(w) {
       let spl = w.split('(');
       let name = spl[0];
       let index = await runSub(spl[1].substring(0, spl[1].length - 1));
-      if(varstack[exec_level][name] == undefined) {
+      if(varstack[exec_level][name] == undefined || varstack[exec_level][name][index] == undefined) {
         return `error var ${name} not initialized`;
       }
       //console.log(varstack[exec_level][name]);
