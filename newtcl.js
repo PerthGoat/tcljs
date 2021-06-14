@@ -151,6 +151,7 @@ proc tan {x} {
 }
 
 proc arrayTest {name} {
+  aba
   for {set i 0} {$i 3 <} {incr i} {
     puts [tan $name($i)]
   }
@@ -164,7 +165,7 @@ set x(2) 2
 
 # puts $x(1)
 
-arrayTeast $x
+arrayTest $x
 # puts [tan 4]`;
 
 function isAlphaNum(s) {
@@ -174,6 +175,7 @@ function isAlphaNum(s) {
 let varstack = [];
 let procstack = {};
 let exec_level = 0;
+let current_line = [1];
 varstack.push({});
 
 function runSub(w) {
@@ -262,6 +264,7 @@ function runCmd(cl) {
     }
     exec_level++;
     
+    current_line.push(1);
     varstack.push({});
     //console.log(cl[1]);
     for(let i = 0;i < args.length;i++) {
@@ -272,6 +275,7 @@ function runCmd(cl) {
     let proc_result = runTCL(proc['procbody']);
     
     varstack.pop();
+    current_line.pop();
     
     exec_level--;
     //console.log(proc);
@@ -318,7 +322,9 @@ function runCmd(cl) {
     case 'uplevel':
     if (debug) logColor('UPLEVEL START', '#FF0');
     exec_level--;
+    current_line.push(1);
     let tc_res = runTCL(cl[1]);
+    current_line.pop();
     exec_level++;
     if (debug) logColor('UPLEVEL END', '#FF0');
     return tc_res;
@@ -384,8 +390,6 @@ function runTCL(tcs) {
 
   let cmd_list = [];
   
-  let current_line = 1;
-  
   let lastval = '';
 
   for(let i = 0;i < tcs.length;i++) {
@@ -397,19 +401,25 @@ function runTCL(tcs) {
       if((tcs[i] == '\n' || tcs[i] == ';') && cmd_list.length > 0) {
         if(cmd_list[0][0] == '#') {
           cmd_list = [];
-          current_line++;
+          current_line[exec_level]++;
           continue;
         }
         let cmd_result = runCmd(cmd_list);
         if(cmd_result.startsWith('error')) {
-          console.warn(`${cmd_result} on line ${current_line}`);
+          let error_build = `${cmd_result} on line ${current_line[exec_level]}`
+          for(let c = exec_level - 1;c >= 0;c--) {
+            error_build += ` called from line ${current_line[c]}`;
+          }
+          
+          console.warn(error_build);
+          
         } else {
           lastval = cmd_result;
         }
         //console.log(cmd_list);
         cmd_list = [];
       }
-      if(tcs[i] == '\n') current_line++;
+      if(tcs[i] == '\n') current_line[exec_level]++;
       continue;
     }
     
@@ -423,7 +433,7 @@ function runTCL(tcs) {
         watch--;
       }
       while(watch != 0) {
-        if(tcs[i] == '\n') current_line++;
+        if(tcs[i] == '\n') current_line[exec_level]++;
         sb += tcs[i];
         i++;
         if(tcs[i] == ']') {
@@ -441,7 +451,7 @@ function runTCL(tcs) {
         watch--;
       }
       while(watch != 0) {
-        if(tcs[i] == '\n') current_line++;
+        if(tcs[i] == '\n') current_line[exec_level]++;
         sb += tcs[i];
         i++;
         if(tcs[i] == '}') {
@@ -455,7 +465,7 @@ function runTCL(tcs) {
       sb += tcs[i];
       i++;
       while(tcs[i] != '"') {
-        if(tcs[i] == '\n') current_line++;
+        if(tcs[i] == '\n') current_line[exec_level]++;
         sb += tcs[i];
         i++;
       }
@@ -478,12 +488,12 @@ function runTCL(tcs) {
   if(cmd_list.length > 0) {
     if(cmd_list[0][0] == '#') {
       cmd_list = [];
-      current_line++;
+      current_line[exec_level]++;
       return lastval;
     }
     let cmd_result = runCmd(cmd_list);
     if(cmd_result.startsWith('error')) {
-      console.warn(`${cmd_result} on line ${current_line}`);
+      console.warn(`${cmd_result} on line ${current_line[exec_level]}`);
     } else {
       lastval = cmd_result;
     }
