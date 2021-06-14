@@ -222,7 +222,7 @@ set oy 0
 
 while {1 1 =} {
   set key [keyin]
-  if {[expr $key 47 >] [expr $key 57 <] =} {
+  if {[expr $key 47 >] [expr $key 58 <] =} {
     drawLetterBlock [expr $key 48 -] $ox $oy
     set ox [expr $ox 5 +]
     if {$ox 64 >} {
@@ -242,14 +242,15 @@ while {1 1 =} {
 `;
 
 function isAlphaNum(s) {
-  return s.match(/^[a-z0-9+-/*.=><()$#%]+$/i);
+  return s.match(/^[a-z0-9+-/*.=><()$#%_]+$/i);
 }
 
 function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-let ctx = document.getElementById('screenout').getContext('2d');
+let canvas = document.getElementById('screenout');
+let ctx = canvas.getContext('2d');
 
 let varstack = [];
 let procstack = {};
@@ -307,7 +308,7 @@ async function runSub(w) {
         continue;
       }
       if(w[i] == '$') {
-        while(w[i] != ' ' && w[i] != '\n' && i < w.length - 1) {
+        while(w[i] != ' ' && w[i] != '\t' && w[i] != '\n' && i < w.length - 1) {
           sb_b += w[i++];
         }
         ret_str += await runSub(sb_b) + w[i];
@@ -351,7 +352,7 @@ async function runCmd(cl) {
   if (debug) logColor(cl, '#E66');
   for(let i = 0;i < cl.length;i++) {
     cl[i] = await runSub(cl[i]);
-    if(cl[i].startsWith('error')) {
+    if(typeof(cl[i]) == 'string' && cl[i].startsWith('error')) {
       return cl[i];
     }
   }
@@ -418,8 +419,22 @@ async function runCmd(cl) {
     ctx.fillRect(parseFloat(coordx), parseFloat(coordy), 1, 1);
     
     break;
+    case 'fillcolor': // fillcolor x y w h r g b
+      ctx.fillStyle = `rgb(${cl[5]},${cl[6]},$cl[7]})`
+      ctx.fillRect(cl[1], cl[2], cl[3], cl[4]);
+    break;
+    case 'asarray':
+      return cl[1].split(' ');
+    break;
     case 'sleep':
     await sleep(parseFloat(cl[1]));
+    break;
+    case 'time':
+    return '' + (Date.now() / 1000)
+    break;
+    case 'setpixsz':
+    canvas.width = cl[1];
+    canvas.height = cl[2];
     break;
     case 'keyin':
       let kp = last_key_pressed;
@@ -503,6 +518,14 @@ async function runCmd(cl) {
           math_stack[math_stack.length - 2] = math_stack[math_stack.length - 2] < math_stack[math_stack.length - 1];
           math_stack.pop();
           break;
+          case '>=':
+          math_stack[math_stack.length - 2] = math_stack[math_stack.length - 2] >= math_stack[math_stack.length - 1];
+          math_stack.pop();
+          break;
+          case '<=':
+          math_stack[math_stack.length - 2] = math_stack[math_stack.length - 2] <= math_stack[math_stack.length - 1];
+          math_stack.pop();
+          break;
           case '%':
           math_stack[math_stack.length - 2] = math_stack[math_stack.length - 2] % math_stack[math_stack.length - 1];
           math_stack.pop();
@@ -535,7 +558,7 @@ async function runTCL(tcs) {
   let lastval = '';
   
   for(let i = 0;i < tcs.length;i++) {
-    if (tcs[i] == ' ' || tcs[i] == '\n' || tcs[i] == ';') {
+    if (tcs[i] == ' ' || tcs[i] == '\t' || tcs[i] == '\n' || tcs[i] == ';') {
       if(sb != '') {
         cmd_list.push(sb);
         sb = '';
@@ -547,7 +570,7 @@ async function runTCL(tcs) {
           continue;
         }
         let cmd_result = await runCmd(cmd_list);
-        if(cmd_result.startsWith('error')) {
+        if(typeof(cmd_result) == 'string' && cmd_result.startsWith('error')) {
           let error_build = `${cmd_result} in ${exec_name[exec_level]} on line ${mylinecount}`;
           addToResultBox(error_build);
           
@@ -640,7 +663,7 @@ async function runTCL(tcs) {
       return lastval;
     }
     let cmd_result = await runCmd(cmd_list);
-    if(cmd_result.startsWith('error')) {
+    if(typeof(cmd_result) == 'string' && cmd_result.startsWith('error')) {
       let error_build = `${cmd_result} in ${exec_name[exec_level]} on line ${mylinecount}`;
       addToResultBox(error_build);
       
@@ -674,11 +697,25 @@ function addToResultBox(s) {
 }
 
 let running = false;
+let stopped = true;
 async function runTclButton() {
   if (running) {
+    running = false;
+  }
+  
+  if(!stopped) {
+    setTimeout(runTclButton, 100);
     return;
   }
+  
+  canvas.width = 64;
+  canvas.height = 64;
+  
+  ctx.fillStyle = `rgb(255,255,255)`;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  
   running = true;
+  stopped = false;
   let code = document.getElementById('code-editor').getElementsByClassName('codes')[0].value;
   addToResultBox('START');
   let t0 = performance.now();
@@ -689,6 +726,8 @@ async function runTclButton() {
   let t1 = performance.now();
   logColor(`execution finished in ${(t1 - t0) / 1000} seconds`, '#5EBA7D');
   addToResultBox(`execution finished in ${(t1 - t0) / 1000} seconds\n`);
+  running = false;
+  stopped = true;
 }
 
 function stopTCL() {
