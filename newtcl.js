@@ -451,7 +451,7 @@ async function runCmd(cl) {
       } else if(elsebody != undefined) {
         res = await runTCL(elsebody);
       }
-      
+      if(typeof(res) == 'object' && 'return' in res) return res['return']
       if(res.startsWith('error')) return res;
     break;
     case 'while':
@@ -459,9 +459,8 @@ async function runCmd(cl) {
       let whilebody = cl[2];
       while(await runTCL('expr ' + whilestatement) == 'true') {
         let res = await runTCL(whilebody);
-        if(res.startsWith('error')) {
-          return res;
-        }
+        if(typeof(res) == 'object' && 'return' in res) return res['return']
+        if(res.startsWith('error')) return res;
       }
     break;
     case 'uplevel':
@@ -474,7 +473,7 @@ async function runCmd(cl) {
     return tc_res;
     break;
     case 'return':
-      return cl[1];
+      return {'return':cl[1]};
     break;
     case 'list':
       let cll = cl.slice(1, cl.length);
@@ -576,6 +575,9 @@ async function runTCL(tcs) {
           
           return cmd_result;
         } else {
+          if(typeof(cmd_result) == 'object' && 'return' in cmd_result) {
+            return cmd_result;
+          }
           lastval = cmd_result;
         }
         //console.log(cmd_list);
