@@ -451,7 +451,13 @@ async function runCmd(cl) {
       } else if(elsebody != undefined) {
         res = await runTCL(elsebody);
       }
-      if(typeof(res) == 'object' && 'return' in res) return res['return']
+      if(typeof(res) == 'object') {
+        if('return' in res) {
+          return res['return'];
+        } else {
+          return 'error got strange object in if result';
+        }
+      }
       if(res.startsWith('error')) return res;
     break;
     case 'while':
@@ -459,9 +465,13 @@ async function runCmd(cl) {
       let whilebody = cl[2];
       while(await runTCL('expr ' + whilestatement) == 'true') {
         let res = await runTCL(whilebody);
-        if(typeof(res) == 'object' && 'return' in res) return res['return']
+        if(typeof(res) == 'object' && 'return' in res) return res['return'];
+        if(typeof(res) == 'object' && 'break' in res) break;
         if(res.startsWith('error')) return res;
       }
+    break;
+    case 'break':
+      return ['break'];
     break;
     case 'uplevel':
     if (debug) logColor('UPLEVEL START', '#FF0');
