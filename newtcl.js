@@ -155,15 +155,47 @@ proc tan {x} {
 `;
 
 let tcsr = `
-set x 0
-while {$x 10 <} {
-  putpixel $x 0 0 0 0
-  incr x
+
+
+proc blinkon {} {
+  set x 0
+  while {$x 10 <} {
+    set y 0
+    while {$y 10 <} {
+      putpixel $x $y 0 0 0
+      incr y
+    }
+    incr x
+  }
 }
+
+proc blinkoff {} {
+  set x 0
+  while {$x 10 <} {
+    set y 0
+    while {$y 10 <} {
+      putpixel $x $y 255 255 255
+      incr y
+    }
+    incr x
+  }
+}
+
+for {set j 0} {$j 20 <} {incr j} {
+blinkon
+sleep 100
+blinkoff
+}
+
+
 `;
 
 function isAlphaNum(s) {
   return s.match(/^[a-z0-9+-/*.=><()$#]+$/i);
+}
+
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 let ctx = document.getElementById('screenout').getContext('2d');
@@ -188,7 +220,7 @@ function resetS() {
   exec_name = ['MAIN']; // holds the current exec name for debugging
 }
 
-function runSub(w) {
+async function runSub(w) {
   if(w[0] == '{') {
     return w.substring(1, w.length - 1);
   }
@@ -197,7 +229,7 @@ function runSub(w) {
     if(w[w.length - 1] == ')') {
       let spl = w.split('(');
       let name = spl[0];
-      let index = runSub(spl[1].substring(0, spl[1].length - 1));
+      let index = await runSub(spl[1].substring(0, spl[1].length - 1));
       //console.log(varstack[exec_level][name]);
       return varstack[exec_level][name][index];
     } else {
@@ -206,7 +238,7 @@ function runSub(w) {
   }
   if(w[0] == '[') {
     w = w.substring(1, w.length - 1);
-    return runTCL(w);
+    return await runTCL(w);
   }
   if(w[0] == '"') {
     let ret_str = '';
@@ -220,7 +252,7 @@ function runSub(w) {
         while(w[i] != ' ' && w[i] != '\n' && i < w.length - 1) {
           sb_b += w[i++];
         }
-        ret_str += runSub(sb_b) + w[i];
+        ret_str += await runSub(sb_b) + w[i];
         sb_b = '';
       } else if(w[i] == '[') {
         sb_b += w[i];
@@ -239,7 +271,7 @@ function runSub(w) {
           }
         }
         sb_b += w[i];
-        ret_str += runSub(sb_b);
+        ret_str += await runSub(sb_b);
         sb_b = '';
       }
       else {
@@ -257,10 +289,10 @@ function logColor(txt, color) {
 
 const debug = false;
 
-function runCmd(cl) {
+async function runCmd(cl) {
   if (debug) logColor(cl, '#E66');
   for(let i = 0;i < cl.length;i++) {
-    cl[i] = runSub(cl[i]);
+    cl[i] = await runSub(cl[i]);
   }
   if (debug) logColor(cl, '#BBB');
   if (cl[0] in procstack) {
@@ -282,7 +314,7 @@ function runCmd(cl) {
       //runCmd(['set', '{' + args[i] + '}', '{' + cl[i + 1] + '}']);
     }
     
-    let proc_result = runTCL(proc['procbody']);
+    let proc_result = await runTCL(proc['procbody']);
     
     varstack.pop();
     current_line.pop(); exec_name.pop();
@@ -325,28 +357,31 @@ function runCmd(cl) {
     ctx.fillRect(parseFloat(coordx), parseFloat(coordy), 1, 1);
     
     break;
+    case 'sleep':
+    await sleep(parseFloat(cl[1]));
+    break;
     case 'if':
       let ifstatement = cl[1];
       let ifbody = cl[2];
       let elsebody = cl[3];
-      if(runTCL('expr ' + ifstatement) == 'true') {
-        runTCL(ifbody);
+      if(await runTCL('expr ' + ifstatement) == 'true') {
+        await runTCL(ifbody);
       } else if(elsebody != undefined) {
-        runTCL(elsebody);
+        await runTCL(elsebody);
       }
     break;
     case 'while':
       let whilestatement = cl[1];
       let whilebody = cl[2];
-      while(runTCL('expr ' + whilestatement) == 'true') {
-        runTCL(whilebody);
+      while(await runTCL('expr ' + whilestatement) == 'true') {
+        await runTCL(whilebody);
       }
     break;
     case 'uplevel':
     if (debug) logColor('UPLEVEL START', '#FF0');
     exec_level--;
     current_line.push(1);
-    let tc_res = runTCL(cl[1]);
+    let tc_res = await runTCL(cl[1]);
     current_line.pop();
     exec_level++;
     //console.log(exec_name);
@@ -409,7 +444,7 @@ function runCmd(cl) {
   return '';
 }
 
-function runTCL(tcs) {
+async function runTCL(tcs) {
   let sb = '';
 
   let cmd_list = [];
@@ -428,7 +463,7 @@ function runTCL(tcs) {
           current_line[exec_level]++;
           continue;
         }
-        let cmd_result = runCmd(cmd_list);
+        let cmd_result = await runCmd(cmd_list);
         if(cmd_result.startsWith('error')) {
           let error_build = `${cmd_result} in ${exec_name[exec_level]} on line ${current_line[exec_level]}`
           for(let c = exec_level - 1;c >= 0;c--) {
@@ -524,7 +559,7 @@ function runTCL(tcs) {
       current_line[exec_level]++;
       return lastval;
     }
-    let cmd_result = runCmd(cmd_list);
+    let cmd_result = await runCmd(cmd_list);
     if(cmd_result.startsWith('error')) {
       let error_build = `${cmd_result} in ${exec_name[exec_level]} on line ${current_line[exec_level]}`
       for(let c = exec_level - 1;c >= 0;c--) {
@@ -561,12 +596,12 @@ function addToResultBox(s) {
   c_res.scrollTop = c_res.scrollHeight;
 }
 
-function runTclButton() {
+async function runTclButton() {
   let code = document.getElementById('code-editor').getElementsByClassName('codes')[0].value;
   addToResultBox('START');
   let t0 = performance.now();
   resetS();
-  let t_result = runTCL(standard_library + code);
+  let t_result = await runTCL(standard_library + code);
   
   if(t_result.startsWith('error')) {
     let error_build = `${t_result} in ${exec_name[exec_level]} on line ${current_line[exec_level]}`
