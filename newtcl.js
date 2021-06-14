@@ -112,7 +112,12 @@ proc PI {} {
   return 3.14159265358979323846264338327950288
 }
 
+proc PI2 {} {
+  return [expr [PI] 2 *]
+}
+
 proc sin {x} {
+  set x [expr $x [PI2] %]
   set xsum 0
   set flip 0
   
@@ -242,7 +247,7 @@ while {1 1 =} {
 `;
 
 function isAlphaNum(s) {
-  return s.match(/^[a-z0-9+-/*.=><()$#%_]+$/i);
+  return s.match(/^[a-z0-9+-/*.=><()$#%_&]+$/i);
 }
 
 function sleep(ms) {
@@ -273,6 +278,10 @@ function resetS() {
   exec_name = ['MAIN']; // holds the current exec name for debugging
 }
 
+function deepcopy(a) {
+  return JSON.parse(JSON.stringify(a));
+}
+
 async function runSub(w) {
   if(w[0] == '{') {
     return w.substring(1, w.length - 1);
@@ -286,13 +295,12 @@ async function runSub(w) {
       if(varstack[exec_level][name] == undefined || varstack[exec_level][name][index] == undefined) {
         return `error var ${name} not initialized`;
       }
-      //console.log(varstack[exec_level][name]);
-      return varstack[exec_level][name][index];
+      return deepcopy(varstack[exec_level][name])[index];
     } else {
       if(varstack[exec_level][w] == undefined) {
         return `error var ${w} not initialized`;
       }
-      return varstack[exec_level][w];
+      return deepcopy(varstack[exec_level][w]);
     }
   }
   if(w[0] == '[') {
@@ -383,14 +391,14 @@ async function runCmd(cl) {
     
     exec_level--;
     //console.log(proc);
-    return proc_result;
+    return (typeof(proc_result) == 'object' && 'return' in proc_result) ? proc_result['return'] : proc_result;;
   }
   switch(cl[0]) {
     case 'set':
     if(cl[1][cl[1].length - 1] == ')') {
       let spl = cl[1].split('(');
       let name = spl[0];
-      let ind = spl[1].substring(0, spl[1].length - 1);
+      let ind = await runSub(spl[1].substring(0, spl[1].length - 1));
       if(varstack[exec_level][name] == undefined) {
         varstack[exec_level][name] = {};
       }
@@ -419,12 +427,23 @@ async function runCmd(cl) {
     ctx.fillRect(parseFloat(coordx), parseFloat(coordy), 1, 1);
     
     break;
+    case 'prntstack':
+      console.log(varstack);
+    break;
+    case 'putsdbg':
+      console.log(cl);
+    break;
     case 'fillcolor': // fillcolor x y w h r g b
-      ctx.fillStyle = `rgb(${cl[5]},${cl[6]},$cl[7]})`
-      ctx.fillRect(cl[1], cl[2], cl[3], cl[4]);
+      ctx.fillStyle = `rgb(${cl[5]},${cl[6]},${cl[7]})`
+      ctx.fillRect(parseFloat(cl[1]), parseFloat(cl[2]), parseFloat(cl[3]), parseFloat(cl[4]));
     break;
     case 'asarray':
-      return cl[1].split(' ');
+      let spl = cl[1].split(' ');
+      let nw = {};
+      for(let s = 0;s < spl.length;s++) {
+        nw[s] = spl[s]
+      }
+      return nw;
     break;
     case 'sleep':
     await sleep(parseFloat(cl[1]));
@@ -451,10 +470,14 @@ async function runCmd(cl) {
       } else if(elsebody != undefined) {
         res = await runTCL(elsebody);
       }
+      
       if(typeof(res) == 'object') {
         if('return' in res) {
           return res['return'];
+        } else if (res[0] == 'break') {
+          return res;
         } else {
+          //console.log(res);
           return 'error got strange object in if result';
         }
       }
@@ -463,11 +486,15 @@ async function runCmd(cl) {
     case 'while':
       let whilestatement = cl[1];
       let whilebody = cl[2];
+      //let loopkill = 0;
       while(await runTCL('expr ' + whilestatement) == 'true') {
         let res = await runTCL(whilebody);
         if(typeof(res) == 'object' && 'return' in res) return res['return'];
-        if(typeof(res) == 'object' && 'break' in res) break;
+        if(typeof(res) == 'object' && res[0] == 'break') break;
         if(res.startsWith('error')) return res;
+        /*if(++loopkill == 200) {
+          return 'error loop took too long';
+        }*/
       }
     break;
     case 'break':
@@ -519,6 +546,10 @@ async function runCmd(cl) {
           math_stack[math_stack.length - 2] = math_stack[math_stack.length - 2] == math_stack[math_stack.length - 1];
           math_stack.pop();
           break;
+          case '&':
+          math_stack[math_stack.length - 2] = math_stack[math_stack.length - 2] == 'true' && math_stack[math_stack.length - 1] == 'true';
+          math_stack.pop();
+          break;
           case '>':
           math_stack[math_stack.length - 2] = math_stack[math_stack.length - 2] > math_stack[math_stack.length - 1];
           math_stack.pop();
@@ -533,6 +564,10 @@ async function runCmd(cl) {
           break;
           case '<=':
           math_stack[math_stack.length - 2] = math_stack[math_stack.length - 2] <= math_stack[math_stack.length - 1];
+          math_stack.pop();
+          break;
+          case '!=':
+          math_stack[math_stack.length - 2] = math_stack[math_stack.length - 2] != math_stack[math_stack.length - 1];
           math_stack.pop();
           break;
           case '%':
@@ -585,7 +620,7 @@ async function runTCL(tcs) {
           
           return cmd_result;
         } else {
-          if(typeof(cmd_result) == 'object' && 'return' in cmd_result) {
+          if(typeof(cmd_result) == 'object' && '(return' in cmd_result || cmd_result[0] == 'break') {
             return cmd_result;
           }
           lastval = cmd_result;
