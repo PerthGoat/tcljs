@@ -136,6 +136,10 @@ proc decr {x} {
   uplevel [list set $x $listexpr]
 }
 
+proc trunc {n} {
+  return [expr $n [expr $n 1 %] -]
+}
+
 proc rand {state} {
   set res [expr $state 48271 *]
   set res [expr $res 65536 %]

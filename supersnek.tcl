@@ -121,13 +121,13 @@ proc getRandomFoodPos {lastpos} {
   set x $lastpos(0)
   set y $lastpos(1)
   
-  set randx [expr [rand $x] 14 %]
-  set randy [expr [rand $y] 14 %]
+  set randx [expr [rand [time]] 14 %]
+  set randy [expr [rand $x] 14 %]
   
   set randx [expr $randx 1 +]
   set randy [expr $randy 1 +]
   
-  return [asarray "$randx $randy"]
+  return [asarray "[trunc $randx] [trunc $randy]"]
 }
 
 proc ShowGameOver {} {
@@ -190,26 +190,19 @@ set foodpiece [getRandomFoodPos [asarray "8 5"]]
 # snake direction, length, segments
 set snake [asarray "0 0"]
 
-# draw the snake frame
-drawFrame
+set snake [addSnakeSegment $snake 6 8]
+set snake [addSnakeSegment $snake 5 8]
 
-drawBackground
+set ltime [time]
 
-set snake [addSnakeSegment $snake 8 8]
-set snake [addSnakeSegment $snake 8 8]
-set snake [addSnakeSegment $snake 8 8]
-set snake [addSnakeSegment $snake 8 8]
-set snake [addSnakeSegment $snake 8 8]
-set snake [addSnakeSegment $snake 8 8]
-set snake [addSnakeSegment $snake 8 8]
-set snake [addSnakeSegment $snake 8 8]
-set snake [addSnakeSegment $snake 8 8]
-set snake [addSnakeSegment $snake 8 8]
-set snake [addSnakeSegment $snake 8 8]
-set snake [addSnakeSegment $snake 8 8]
+# goal delay of 150ms
+set goal_delay 150
+
+set real_delay $goal_delay
 
 while {1 1 =} {
   set key [keyin]
+  drawFrame
   drawBackground
   drawSnake $snake
   putpixel $foodpiece(0) $foodpiece(1) 255 0 0
@@ -270,5 +263,18 @@ while {1 1 =} {
     break
   }
   
-  sleep 150
+  set deltatime [expr [time] $ltime -]
+  set ltime [time]
+  set dtms [expr $deltatime 1000 *]
+  set diff [expr $dtms $goal_delay -]
+  
+  if {$diff 0 >} {
+    decr real_delay
+  }
+  
+  if {$diff 0 <} {
+    incr real_delay
+  }
+  
+  sleep $real_delay
 }
