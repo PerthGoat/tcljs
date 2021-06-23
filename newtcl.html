@@ -50,6 +50,7 @@
     <button onclick='runTclButton()'>run</button>
     <button onclick='stopTCL()'>stop</button>
   </div>
+  <script type='text/javascript' src='tclstdlib.js'></script>
   <script type='text/javascript' src='newtcl.js'></script>
   <script type='text/javascript'>
     function renumber_box() {
@@ -107,9 +108,6 @@
           c_text.value = c_text.value.substring(0, start) + '  ' + c_text.value.substring(end);
         
           c_text.selectionStart = c_text.selectionEnd = start + 2;
-        } else {
-          c_text.value = c_text.value.substring(0, start - 2) + c_text.value.substring(end);
-          c_text.selectionStart = c_text.selectionEnd = start - 2;
         }
       }
     });
