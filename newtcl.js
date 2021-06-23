@@ -1,7 +1,433 @@
+let standard_library = `
+# compute POWER of x to the y
+proc pow {x y} {
+  if {$y 0 =} {
+    return 1
+  }
+  
+  set res $x
+  for {set i 1} {$i $y <} {incr i} {
+    
+    set res [expr $res $x *]
+  }
+  return $res
+}
+
+proc factorial {x} {
+  set fact 1
+  for {} {$x 1 >} {set x [expr $x 1 -]} {
+    set fact [expr $fact $x *]
+  }
+
+  return $fact
+}
+
+# compute sqrt of n
+# this is a poor algorithm for it, it just gets it approximately correct in 10 iterations
+proc sqrt {n} {
+  # run for 10 iterations
+  
+  set est 0
+  
+  set cness 0
+  
+  for {set i 0} {$i 10 <} {incr i} {
+    set cness [pow $est 2]
+    # negative diff is too high
+    # positive diff is too low
+    set diff [expr $n $cness -]
+    set smalldiff [expr $diff 10 /]
+    #puts $smalldiff
+    
+    set est [expr $est $smalldiff +]
+    
+    #puts $est
+  }
+  
+  return $est
+}
+
+# arctangent of x using the taylor series
+proc arctan {x} {
+  
+  set xsum 0
+  set flip 0
+  
+  for {set i 0} {$i 50 <} {incr i} { 
+    set pw [expr $i 2 *]
+    set pw [expr $pw 1 +]
+    
+    set xt [pow $x $pw]
+    
+    set xd [expr $xt $pw /]
+    
+    if {$flip 0 =} {
+      set xsum [expr $xsum $xd +]
+      set flip 1
+    } {
+      set xsum [expr $xsum $xd -]
+      set flip 0
+    }
+    
+    #puts $xd
+  }
+  return $xsum
+}
+
+proc PI {} {
+  return 3.14159265358979323846264338327950288
+}
+
+proc PI2 {} {
+  return [expr [PI] 2 *]
+}
+
+proc sin {x} {
+  set x [expr $x [PI2] %]
+  set xsum 0
+  set flip 0
+  
+  for {set i 0} {$i 10 <} {incr i} {
+    set pw [expr $i 2 *]
+    set pw [expr $pw 1 +]
+    set fact [factorial $pw]
+    
+    set xt [pow $x $pw]
+    
+    set xd [expr $xt $fact /]
+    
+    if {$flip 0 =} {
+      set xsum [expr $xsum $xd +]
+      set flip 1
+    } {
+      set xsum [expr $xsum $xd -]
+      set flip 0
+    }
+    
+    #puts $xd
+  }
+  
+  return $xsum
+}
+
+proc cos {x} {
+  set halfpi [PI]
+  set halfpi [expr $halfpi 2 /]
+  set sum [expr $halfpi $x +]
+  return [sin $sum]
+}
+
+proc tan {x} {
+  set s [sin $x]
+  set c [cos $x]
+  
+  return [expr $s $c /]
+}
+
+proc incr {x} {
+  set listexpr [uplevel [list expr "\\$$x" 1 +]]
+  uplevel [list set $x $listexpr]
+}
+
+proc decr {x} {
+  set listexpr [uplevel [list expr "\\$$x" 1 -]]
+  uplevel [list set $x $listexpr]
+}
+
+proc trunc {n} {
+  return [expr $n [expr $n 1 %] -]
+}
+
+proc rand {state} {
+  set res [expr $state 48271 *]
+  set res [expr $res 65536 %]
+  uplevel [list set rngstate $res]
+  return $res
+}
+`;
+
 
 // holds the default program
-let tcsr = `
-`;
+let tcsr = `setpixsz 16 16
+
+proc getBlockFromIndex {index} {
+  set block(0) "11111001100110011111"
+  set block(1) "00100110001000100111"
+  set block(2) "11110001111110001111"
+  set block(3) "11110001111100011111"
+  set block(4) "10011001111100010001"
+  set block(5) "11111000111100011111"
+  set block(6) "11111000111110011111"
+  set block(7) "11110001001001000100"
+  set block(8) "11111001111110011111"
+  set block(9) "11111001111100011111"
+  set block(A) "11111001111110011001"
+  set block(B) "11101001111010011110"
+  set block(C) "11111000100010001111"
+  set block(D) "11101001100110011110"
+  set block(E) "11111000111110001111"
+  set block(F) "11111000111110001000"
+  set block(M) "11111001100100001111"
+  set block(-) "00000000111100000000"
+  set block(P) "11111001111110001000"
+  set block(L) "10001000100010001111"
+  set block(Y) "10011001111100011111"
+  set block(N) "11111001100110011001"
+  set block("?") "01101001001000000010"
+  return $block($index)
+}
+
+proc drawLetterBlock {index offsetx offsety} {
+  set blk [getBlockFromIndex $index]
+  set y 0
+  set i 0
+  while {$i 20 <} {
+    set x [expr $i 4 %]
+    if {0 $x =} {
+      if {$i 0 =} {} {
+        incr y
+      }
+    }
+    set color [expr 255 [expr $blk($i) 255 *] -]
+    putpixel [expr $x $offsetx +] [expr $y $offsety +] $color $color $color
+    incr i
+  }
+}
+
+proc drawFrame {} {
+  fillcolor 0 0 16 16 0 0 0
+}
+
+proc drawBackground {} {
+  fillcolor 1 1 14 14 0 0 255
+}
+
+proc drawSnake {sn} {
+  set len [expr $sn(1) 2 +]
+  
+  set i 2
+  while {$i $len <} {
+    set seg $sn($i)
+    putpixel $seg(0) $seg(1) 0 255 0
+    incr i
+  }
+}
+
+proc addSnakeSegment {snk x y} {
+  set nextSnakeInd [expr $snk(1) 2 +]
+
+  set snk($nextSnakeInd) [asarray "$x $y"]
+
+  set snk(1) [expr $snk(1) 1 +]
+  
+  return $snk
+}
+
+proc moveSnake {snk} {
+  set dir $snk(0)
+  set len $snk(1)
+  
+  set orig $snk(2)
+  # shift snake
+  
+  set i 0
+  while {$i [expr $len 1 -] <} {
+    set ind [expr $i 2 +]
+    
+    set next $snk([expr $ind 1 +])
+    
+    set snk([expr $ind 1 +]) $snk($ind)
+    set snk($ind) $next
+    
+    incr i
+  }
+  
+  # move snake head
+  
+  if {$snk(0) 0 =} {
+    set orig(0) [expr $orig(0) 1 +]
+  }
+  
+  if {$snk(0) 2 =} {
+    set orig(0) [expr $orig(0) 1 -]
+  }
+  
+  if {$snk(0) 1 =} {
+    set orig(1) [expr $orig(1) 1 +]
+  }
+  
+  if {$snk(0) 3 =} {
+    set orig(1) [expr $orig(1) 1 -]
+  }
+  
+  set snk(2) $orig
+  
+  #putsdbg $snk
+  
+  return $snk
+}
+
+proc getRandomFoodPos {lastpos} {
+  set x $lastpos(0)
+  set y $lastpos(1)
+  
+  set randx [expr [rand [time]] 14 %]
+  set randy [expr [rand $x] 14 %]
+  
+  set randx [expr $randx 1 +]
+  set randy [expr $randy 1 +]
+  
+  return [asarray "[trunc $randx] [trunc $randy]"]
+}
+
+proc ShowGameOver {} {
+setpixsz 64 64
+drawLetterBlock 6 4 10
+drawLetterBlock 0 12 10
+drawLetterBlock 0 20 10
+drawLetterBlock D 28 10
+
+drawLetterBlock 6 12 20
+drawLetterBlock A 20 20
+drawLetterBlock M 28 20
+drawLetterBlock E 36 20
+
+drawLetterBlock - 2 25
+drawLetterBlock - 10 25
+drawLetterBlock - 18 25
+drawLetterBlock - 26 25
+drawLetterBlock - 34 25
+drawLetterBlock - 42 25
+drawLetterBlock - 50 25
+
+drawLetterBlock P 4 35
+drawLetterBlock L 12 35
+drawLetterBlock A 20 35
+drawLetterBlock Y 28 35
+
+drawLetterBlock A 4 45
+drawLetterBlock 6 12 45
+drawLetterBlock A 20 45
+drawLetterBlock 1 28 45
+drawLetterBlock N 36 45
+drawLetterBlock "?" 44 45
+}
+
+proc checkForBodyCollision {snake} {
+  set snakehead $snake(2)
+  set len $snake(1)
+  
+  set i 1
+  
+  while {$i $len <} {
+    set act [expr $i 2 +]
+    
+    set snakepiece $snake($act)
+    
+    
+    if {[expr $snakehead(0) $snakepiece(0) =] [expr $snakehead(1) $snakepiece(1) =] &} {
+      return "1"
+    }
+    incr i
+  }
+  
+  return "0"
+}
+
+# a piece of food at a random-ish spot
+set foodpiece [getRandomFoodPos [asarray "8 5"]]
+
+# snake direction, length, segments
+set snake [asarray "0 0"]
+
+set snake [addSnakeSegment $snake 6 8]
+set snake [addSnakeSegment $snake 5 8]
+
+set ltime [time]
+
+# goal delay of 150ms
+set goal_delay 150
+
+set real_delay $goal_delay
+
+while {1 1 =} {
+  set key [keyin]
+  drawFrame
+  drawBackground
+  drawSnake $snake
+  putpixel $foodpiece(0) $foodpiece(1) 255 0 0
+  
+  # key input for movement
+  # d
+  if {$key 100 =} {
+    set snake(0) [expr $snake(0) 1 +]
+  }
+  # a
+  if {$key 97 =} {
+    set snake(0) [expr $snake(0) 1 -]
+  }
+  
+  if {$snake(0) 3 >} {
+    set snake(0) 0
+  }
+  
+  if {$snake(0) 0 <} {
+    set snake(0) 3
+  }
+  
+  set snake [moveSnake $snake]
+  set snakehead $snake(2)
+  if {[expr $snakehead(0) $foodpiece(0) =] [expr $snakehead(1) $foodpiece(1) =] &} {
+    # eat food
+    set len $snake(1)
+    
+    set snaketail $snake([expr $len 1 +])
+    
+    set snake [addSnakeSegment $snake $snaketail(0) $snaketail(1)]
+    
+    set foodpiece [getRandomFoodPos [asarray "$foodpiece(0) $foodpiece(1)"]]
+  }
+  
+  if {[checkForBodyCollision $snake] 1 =} {
+    ShowGameOver
+    break
+  }
+  
+  if {$snakehead(0) 15 >} {
+    ShowGameOver
+    break
+  }
+  
+  if {$snakehead(1) 15 >} {
+    ShowGameOver
+    break
+  }
+  
+  if {$snakehead(0) 0 <} {
+    ShowGameOver
+    break
+  }
+  
+  if {$snakehead(1) 0 <} {
+    ShowGameOver
+    break
+  }
+  
+  set deltatime [expr [time] $ltime -]
+  set ltime [time]
+  set dtms [expr $deltatime 1000 *]
+  set diff [expr $dtms $goal_delay -]
+  
+  if {$diff 0 >} {
+    decr real_delay
+  }
+  
+  if {$diff 0 <} {
+    incr real_delay
+  }
+  
+  sleep $real_delay
+}`;
 
 // holds a character that makes up a word, was originally
 // alphanumerics but became other characters
