@@ -2,6 +2,20 @@
 // standard library for other stuff to use
 // preappended to every run
 let standard_library = `
+proc for {initCmd testExpr advanceCmd bodyScript} {
+  uplevel $initCmd
+  set testCmd [list expr $testExpr]
+  while {[uplevel $testCmd]} {
+    uplevel $bodyScript
+    uplevel $advanceCmd
+  }
+}
+
+proc incr {x} {
+  set listexpr [uplevel [list expr "\\$$x" 1 +]]
+  uplevel [list set $x $listexpr]
+}
+
 # compute POWER of x to the y
 proc pow {x y} {
   if {$y 0 =} {
@@ -77,6 +91,23 @@ proc arctan {x} {
   return $xsum
 }
 
+
+# get PI
+proc PI {} {
+  set fr1 [expr 1 5 /]
+  set fr1 [arctan $fr1]
+  set fr1 [expr $fr1 4 *]
+  set fr2 [expr 1 239 /]
+  set fr2 [arctan $fr2]
+  
+  set pi4 [expr $fr1 $fr2 -]
+  
+  set pi [expr $pi4 4 *]
+  
+  return $pi
+}
+
+# override PI with a default val from wolfram
 proc PI {} {
   return 3.14159265358979323846264338327950288
 }
@@ -129,6 +160,90 @@ proc tan {x} {
 `;
 
 let tcsr = `
+
+
+proc blinkon {offsetx offsety} {
+  set x 0
+  while {$x 4 <} {
+    set y 0
+    while {$y 5 <} {
+      putpixel [expr $x $offsetx +] [expr $y $offsety +] 0 0 0
+      incr y
+    }
+    incr x
+  }
+}
+
+proc blinkoff {offsetx offsety} {
+  set x 0
+  while {$x 4 <} {
+    set y 0
+    while {$y 5 <} {
+      putpixel [expr $x $offsetx +] [expr $y $offsety +] 255 255 255
+      incr y
+    }
+    incr x
+  }
+}
+
+proc blinkloop {offsetx offsety} {
+  blinkon $offsetx $offsety
+  sleep 100
+  blinkoff $offsetx $offsety
+  sleep 100
+}
+
+proc getBlockFromIndex {index} {
+  set block(0) "11111001100110011111"
+  set block(1) "00100110001000100111"
+  set block(2) "11110001111110001111"
+  set block(3) "11110001111100011111"
+  set block(4) "10011001111100010001"
+  set block(5) "11111000111100011111"
+  set block(6) "11111000111110011111"
+  set block(7) "11110001001001000100"
+  set block(8) "11111001111110011111"
+  set block(9) "11111001111100011111"
+  return $block($index)
+}
+
+proc drawLetterBlock {index offsetx offsety} {
+  set blk [getBlockFromIndex $index]
+  set y 0
+  for {set i 0} {$i 20 <} {incr i} {
+    set x [expr $i 4 %]
+    if {0 $x =} {
+      if {$i 0 =} {} {
+        incr y
+      }
+    }
+    set color [expr 255 [expr $blk($i) 255 *] -]
+    putpixel [expr $x $offsetx +] [expr $y $offsety +] $color $color $color
+  }
+}
+
+set ox 0
+set oy 0
+
+while {1 1 =} {
+  set key [keyin]
+  if {[expr $key 47 >] [expr $key 58 <] =} {
+    drawLetterBlock [expr $key 48 -] $ox $oy
+    set ox [expr $ox 5 +]
+    if {$ox 64 >} {
+      set ox 0
+      set oy [expr $oy 6 +]
+    }
+    sleep 100
+  } {
+    if {$key 69 =} {
+      set ox 0
+      set oy [expr $oy 6 +]
+    }
+    blinkloop $ox $oy
+  }
+}
+
 `;
 
 function isAlphaNum(s) {
